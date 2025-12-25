@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8">
+  <title>Tilbakemelding – Norsk skrivetest</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main class="feedback">
+    <header class="feedback-header">
+      <h1>Tilbakemelding</h1>
+
+      <div class="feedback-status">
+        <div class="status-item">
+          <div class="status-label">Nivå</div>
+          <div class="status-value">{{ level }}</div>
+        </div>
+        <div class="status-item">
+          <div class="status-label">Forsøk på nivå</div>
+          <div class="status-value">{{ turns_at_level }} / 5</div>
+        </div>
+      </div>
+    </header>
+
+    <section class="feedback-verdict">
+      {% if evaluation.verdict == "correct" %}
+        <div class="verdict verdict-correct">Korrekt</div>
+      {% elif evaluation.verdict == "minor" %}
+        <div class="verdict verdict-minor">Nesten</div>
+      {% else %}
+        <div class="verdict verdict-incorrect">Ikke godkjent</div>
+      {% endif %}
+    </section>
+
+    <section class="feedback-block">
+      <div class="block-title">Engelsk setning</div>
+      <div class="block-body block-quote">{{ english_sentence }}</div>
+    </section>
+
+    <section class="feedback-block">
+      <div class="block-title">Din oversettelse</div>
+      <div class="block-body block-quote">{{ user_norwegian }}</div>
+    </section>
+
+    <section class="feedback-block">
+      <div class="block-title">Forslag (eksamensnært)</div>
+      <div class="block-body corrected">{{ evaluation.corrected }}</div>
+    </section>
+
+    {% if evaluation.verdict != "correct" %}
+    <section class="feedback-block">
+      <div class="block-title">Hovedregel</div>
+      <div class="block-body rule">{{ evaluation.short_rule }}</div>
+    </section>
+    {% endif %}
+
+
+    {% if evaluation.issues and evaluation.issues|length > 0 %}
+      <section class="feedback-block">
+        <div class="block-title">Punkter å rette</div>
+
+        <ol class="issues">
+          {% for issue in evaluation.issues %}
+            <li class="issue">
+              <div class="issue-head">
+                <span class="issue-category">{{ issue.category }}</span>
+
+                {% if issue.severity == "error" %}
+                  <span class="issue-sev sev-error">Må rettes</span>
+                {% elif issue.severity == "variant" %}
+                  <span class="issue-sev sev-variant">Variant</span>
+                {% else %}
+                  <span class="issue-sev sev-style">Stil</span>
+                {% endif %}
+              </div>
+
+              <div class="issue-expl">{{ issue.explanation }}</div>
+              <div class="issue-fix"><span class="fix-label">Forslag:</span> {{ issue.fix }}</div>
+            </li>
+          {% endfor %}
+        </ol>
+      </section>
+    {% endif %}
+
+    <section class="feedback-actions">
+        <form action="/game/next" method="post">
+            <a href="/game">Neste</button>
+        </form>
+    </section>
+  </main>
+</body>
+</html>

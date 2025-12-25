@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Norsk Skrivetrening</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <!-- Loading overlay (hidden by default) -->
+  <div id="loadingOverlay" class="loading-overlay" aria-hidden="true">
+    <div class="loading-card" role="status" aria-live="polite" aria-busy="true">
+      <div class="loading-spinner" aria-hidden="true"></div>
+      <div class="loading-title">Sjekker svaret ditt…</div>
+      <div class="loading-subtitle">Dette tar ofte 1–3 sekunder.</div>
+    </div>
+  </div>
+
+  <main class="game">
+    <header class="game-header">
+      <h1 class="game-title">Norsk Skrivetrening</h1>
+
+      <div class="game-status">
+        <div class="status-item">
+          <div class="status-label">Nivå</div>
+          <div class="status-value">{{ level }}</div>
+        </div>
+
+        <div class="status-item">
+          <div class="status-label">Riktig på rad</div>
+          <div class="status-value">{{ correct_streak }}</div>
+        </div>
+
+        <div class="status-item">
+          <div class="status-label">Feil på rad</div>
+          <div class="status-value">{{ incorrect_streak }}</div>
+        </div>
+
+        <div class="status-item">
+          <div class="status-label">Forsøk på nivå</div>
+          <div class="status-value">{{ turns_at_level }} / 5</div>
+        </div>
+      </div>
+    </header>
+
+    <section class="prompt">
+      <div class="prompt-kicker">Oversett til norsk</div>
+      <div class="prompt-sentence">
+        {{ english_sentence }}
+      </div>
+    </section>
+
+    <section class="answer">
+      <form action="/game/submit" method="post" class="answer-form" id="answerForm">
+        <!-- game/session tracking -->
+        <input type="hidden" name="level" value="{{ level }}">
+        <input type="hidden" name="english_sentence" value="{{ english_sentence }}">
+
+        <label class="answer-label" for="norwegian">
+          Din oversettelse
+        </label>
+
+        <textarea
+          id="norwegian"
+          name="norwegian"
+          rows="6"
+          required
+          placeholder="Skriv setningen på norsk…"
+          autofocus
+        ></textarea>
+
+        <div class="answer-actions">
+          <button type="submit" id="submitBtn">Sjekk</button>
+          <a class="quiet-link" href="/">Avslutt</a>
+        </div>
+      </form>
+    </section>
+
+    <footer class="game-footer">
+      <p class="game-note">
+        Tips: Sikt på naturlig norsk. Småfeil teller — dette er prøvemodus.
+      </p>
+    </footer>
+  </main>
+
+  <script>
+    (function () {
+      const form = document.getElementById("answerForm");
+      const overlay = document.getElementById("loadingOverlay");
+      const btn = document.getElementById("submitBtn");
+      const textarea = document.getElementById("norwegian");
+
+      if (!form || !overlay || !btn) return;
+
+      form.addEventListener("submit", function () {
+        // Show overlay
+        overlay.classList.add("is-visible");
+        overlay.setAttribute("aria-hidden", "false");
+
+        // Prevent double submissions
+        btn.disabled = true;
+        btn.textContent = "Sjekker…";
+
+        // Optional: lock input so user doesn't keep editing while request is in flight
+        if (textarea) textarea.readOnly = true;
+      });
+
+      // Optional: if the user comes "back" to this page via BFCache, reset UI
+      window.addEventListener("pageshow", function (e) {
+        overlay.classList.remove("is-visible");
+        overlay.setAttribute("aria-hidden", "true");
+        btn.disabled = false;
+        btn.textContent = "Sjekk";
+        if (textarea) textarea.readOnly = false;
+      });
+    })();
+  </script>
+</body>
+</html>

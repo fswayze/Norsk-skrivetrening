@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8">
+  <title>Resultat – Norsk skrivetest</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main class="result">
+    <header class="result-header">
+      <h1>Resultat</h1>
+      <p class="result-subhead">Dette er nivået spillet ditt endte på.</p>
+    </header>
+
+    <section class="result-score">
+      <div class="score-label">Nivå</div>
+      <div class="score-value">{{ level }}</div>
+
+      {% if end_reason %}
+        <p class="score-reason">
+          {% if end_reason == "two_incorrect" %}
+            Spillet stoppet fordi du hadde to feil på rad.
+          {% elif end_reason == "no_progress" %}
+            Spillet stoppet fordi du ikke rykket opp innen fem forsøk på dette nivået.
+          {% else %}
+            Spillet stoppet.
+          {% endif %}
+        </p>
+      {% endif %}
+    </section>
+
+    <section class="result-next">
+      <h2>Neste steg</h2>
+      <ul class="next-list">
+        <li>Spill igjen og prøv å stabilisere nivået.</li>
+        <li>Bruk skriveøvelsen for lengre tekster når du vil trene prøvesvar.</li>
+      </ul>
+    </section>
+
+    <section class="result-actions">
+      <form action="/game/start" method="post">
+        <button type="submit">Spill igjen</button>
+      </form>
+
+      <div class="result-links">
+        <a href="/">Til forsiden</a>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

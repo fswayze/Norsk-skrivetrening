@@ -1,0 +1,17 @@
+# Environment variables
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Flask
+instance/
+
+# macOS
+.DS_Store
+
+# SQLite
+*.db

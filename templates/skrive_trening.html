@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8">
+  <title>Norsk skrivetest</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main class="home">
+    <header class="home-header">
+      <h1>Norsk skrivetest</h1>
+      <p class="home-subhead">
+        En kort språkspill som tester grammatikk og flyt gjennom oversettelse.
+      </p>
+    </header>
+
+    <section class="home-explanation">
+      <p>
+        Du oversetter én setning om gangen fra engelsk til norsk.
+        To riktige svar på rad tar deg opp et nivå.
+        To feil på rad, eller fem forsøk uten fremgang, avslutter spillet.
+      </p>
+
+      <p>
+        Til slutt får du et nivå (A1–C2) som viser hvor trygg skriften din er
+        i en prøvesituasjon.
+      </p>
+    </section>
+
+    <section class="home-action">
+      <form action="/game" method="post">
+        <button type="submit">Start spillet</button>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

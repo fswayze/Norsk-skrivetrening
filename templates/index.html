@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>NorskSkrivetrening</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="book">
+  <main class="page">
+    <header>
+      <h1>Norsk skrivetrening</h1>
+      <div class="ornament" aria-hidden="true">✶ ✶ ✶</div>
+    </header>
+
+    <p class="lede">En kort språkspill som tester grammatikk og flyt gjennom oversettelse.</p>
+
+    <hr>
+
+    <p>Du oversetter én setning om gangen fra engelsk til norsk. To riktige svar på rad tar deg opp et nivå.
+       To feil på rad, eller fem forsøk uten fremgang, avslutter spillet.</p>
+
+    <p>Til slutt får du et nivå (A1–C2) som viser hvor trygg skriften din er i en prøvesituasjon.</p>
+
+    <div class="actions">
+      <form action="/game/start" method="post">
+        <button type="submit">Start spillet</button>
+      </form>
+    </div>
+  </main>
+</body>
+</html>
