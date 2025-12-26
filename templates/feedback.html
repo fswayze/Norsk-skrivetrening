@@ -37,23 +37,42 @@
       <div class="block-body block-quote">{{ english_sentence }}</div>
     </section>
 
-    <section class="feedback-block">
-      <div class="block-title">Din oversettelse</div>
-      <div class="block-body block-quote">{{ user_norwegian }}</div>
-    </section>
+    {% set has_issues = evaluation.issues and evaluation.issues|length > 0 %}
+    {% if evaluation.verdict == "correct" and not has_issues %}
 
-    <section class="feedback-block">
-      <div class="block-title">Forslag (eksamensnært)</div>
-      <div class="block-body corrected">{{ evaluation.corrected }}</div>
-    </section>
+      <!-- Success Card: collapse user + corrected into one -->
+      <section class="feedback-block success-card">
+        <div class="block-title">Fullt korrekt</div>
 
-    {% if evaluation.verdict != "correct" %}
-    <section class="feedback-block">
-      <div class="block-title">Hovedregel</div>
-      <div class="block-body rule">{{ evaluation.short_rule }}</div>
-    </section>
+        <div class="block-body">
+          <div class="success-row">
+            <span class="success-icon" aria-hidden="true">✓</span>
+            <div class="success-content">
+              <div class="success-sentence">{{ user_norwegian }}</div>
+              <div class="success-subtitle">Bra jobbet — dette er en naturlig bokmålsformulering.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    {% else %}
+
+      <section class="feedback-block">
+        <div class="block-title">Din oversettelse</div>
+        <div class="block-body block-quote">{{ user_norwegian }}</div>
+      </section>
+
+      <section class="feedback-block">
+        <div class="block-title">Forslag (eksamensnært)</div>
+        <div class="block-body corrected">{{ evaluation.corrected }}</div>
+      </section>
+
+      <section class="feedback-block">
+        <div class="block-title">Hovedregel</div>
+        <div class="block-body rule">{{ evaluation.short_rule }}</div>
+      </section>
+
     {% endif %}
-
 
     {% if evaluation.issues and evaluation.issues|length > 0 %}
       <section class="feedback-block">
@@ -83,9 +102,10 @@
     {% endif %}
 
     <section class="feedback-actions">
-        <form action="/game/next" method="post">
-            <a href="/game">Neste</button>
-        </form>
+      <!-- Use a real form submit OR a link, not both. -->
+      <form action="/game/next" method="post">
+        <button type="submit">Neste</button>
+      </form>
     </section>
   </main>
 </body>

@@ -3,13 +3,13 @@ from flask import Flask, render_template, request, redirect, url_for, session
 from dotenv import load_dotenv
 import random
 from datetime import datetime
-from english_sentences import (
-    A1_TRANSLATION_SENTENCES,
-    A2_TRANSLATION_SENTENCES,
-    B1_TRANSLATION_SENTENCES,
-    B2_TRANSLATION_SENTENCES,
-    C1_TRANSLATION_SENTENCES,
-    C2_TRANSLATION_SENTENCES
+from source_sentences import (
+    A1_SEED,
+    A2_SEED,
+    B1_SEED,
+    B2_SEED,
+    C1_SEED,
+    C2_SEED
 );
 from openai import OpenAI
 from pydantic import BaseModel, Field
@@ -23,13 +23,13 @@ load_dotenv()
 PROMPT = "Skriv et kort avsnitt om en morgenrutine du liker."
 DB_PATH = "data/app.db"
 LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"]
-SENTENCES_BY_LEVEL = {
-    "A1": A1_TRANSLATION_SENTENCES,
-    "A2": A2_TRANSLATION_SENTENCES,
-    "B1": B1_TRANSLATION_SENTENCES,
-    "B2": B2_TRANSLATION_SENTENCES,
-    "C1": C1_TRANSLATION_SENTENCES,
-    "C2": C2_TRANSLATION_SENTENCES,
+SEED_BY_LEVEL = {
+    "A1": A1_SEED,
+    "A2": A2_SEED,
+    "B1": B1_SEED,
+    "B2": B2_SEED,
+    "C1": C1_SEED,
+    "C2": C2_SEED,
 }
 
 
@@ -40,16 +40,82 @@ def get_db_connection():
 
 def init_db():
     connection = get_db_connection()
-    # connection.execute(
-    #     """
-        
-    #     """
-    # )
+    connection.execute("PRAGMA foreign_keys = ON;")
+
+    connection.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS source_sentences (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            level TEXT NOT NULL,
+            sentence TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS valid_translations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sentence_id INTEGER NOT NULL,
+            translation TEXT NOT NULL,
+            FOREIGN KEY (sentence_id)
+                REFERENCES source_sentences(id)
+                ON DELETE CASCADE
+        );
+
+         -- Idempotency / data quality:
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_source_sentences_unique
+            ON source_sentences(level, sentence);
+
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_valid_translations_unique
+            ON valid_translations(sentence_id, translation);
+
+        CREATE INDEX IF NOT EXISTS idx_valid_translations_sentence_id
+            ON valid_translations(sentence_id);
+        """
+    )
+
     connection.commit()
     connection.close()
 
+def seed_db():
+    connection = get_db_connection()
+    connection.execute("PRAGMA foreign_keys = ON;")
+
+    for level, items in SEED_BY_LEVEL.items():
+        for english_sentence, bokmaal_translations in items:
+            english_sentence = (english_sentence or "").strip()
+            if not english_sentence:
+                continue
+
+            # 1) Insert sentence (idempotent)
+            connection.execute(
+                "INSERT OR IGNORE INTO source_sentences (level, sentence) VALUES (?, ?)",
+                (level, english_sentence),
+            )
+
+            # 2) Fetch sentence_id (works whether it was inserted now or already existed)
+            row = connection.execute(
+                "SELECT id FROM source_sentences WHERE level = ? AND sentence = ?",
+                (level, english_sentence),
+            ).fetchone()
+            sentence_id = row["id"]
+
+            # 3) Insert translations (idempotent)
+            cleaned = []
+            for t in bokmaal_translations:
+                t = (t or "").strip()
+                if t:
+                    cleaned.append((sentence_id, t))
+
+            connection.executemany(
+                "INSERT OR IGNORE INTO valid_translations (sentence_id, translation) VALUES (?, ?)",
+                cleaned,
+            )
+
+    connection.commit()
+    connection.close()
+
+
 with app.app_context():
     init_db()
+    seed_db()
 
 @app.route("/", methods=["GET"])
 def index():
@@ -67,15 +133,49 @@ def new_game_state():
     }
 
 def pick_sentence(level: str, avoid_id=None):
-    bank = SENTENCES_BY_LEVEL[level]
-    # Simple: sentence_id is index. Avoid repeating the last one if possible.
-    if len(bank) == 0:
+    """
+    Picks a random English prompt from source_sentences for the given level.
+    avoid_id: last sentence id shown (DB id), to reduce immediate repeats.
+    Returns: {"id": int, "english": str}
+    """
+    connection = get_db_connection()
+    connection.execute("PRAGMA foreign_keys = ON;")
+
+    # First try: avoid repeating the previous sentence
+    if avoid_id is not None:
+        row = connection.execute(
+            """
+            SELECT id, sentence
+            FROM source_sentences
+            WHERE level = ?
+              AND id != ?
+            ORDER BY RANDOM()
+            LIMIT 1
+            """,
+            (level, avoid_id),
+        ).fetchone()
+    else:
+        row = None
+
+    # Fallback: no avoid_id provided or only one sentence exists at this level
+    if row is None:
+        row = connection.execute(
+            """
+            SELECT id, sentence
+            FROM source_sentences
+            WHERE level = ?
+            ORDER BY RANDOM()
+            LIMIT 1
+            """,
+            (level,),
+        ).fetchone()
+
+    connection.close()
+
+    if row is None:
         return {"id": 0, "english": ""}
-    idx = random.randrange(len(bank))
-    if avoid_id is not None and len(bank) > 1:
-        while idx == avoid_id:
-            idx = random.randrange(len(bank))
-    return {"id": idx, "english": bank[idx]}
+
+    return {"id": row["id"], "english": row["sentence"]}
 
 
 @app.route("/game/start", methods=["POST"])
@@ -114,12 +214,13 @@ def game_submit():
     # Inputs
     user_norwegian = request.form.get("norwegian", "").strip()
     english_sentence = request.form.get("english_sentence", "").strip()
-    # sentence_id = request.form.get("sentence_id")  # available when you need it
-
+    sentence_id = request.form.get("sentence_id")
+    print(sentence_id, '218')
     evaluation = evaluate_translation(
         game_state["level"],
         english_sentence,
-        user_norwegian
+        user_norwegian,
+        sentence_id
     )
     print(evaluation)
 

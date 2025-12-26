@@ -508,6 +508,86 @@ body {
   .loading-spinner{ animation: none; }
 }
 
+/* -----------------------------
+   Success Card (perfect answer)
+   ----------------------------- */
+
+   .feedback-block.success-card .block-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  /* The whole success block reads as a single celebratory "result" */
+  .success-card {
+    border: 1px solid rgba(46, 125, 50, 0.22);
+    background: rgba(46, 125, 50, 0.06);
+  }
+  
+  .success-card .block-body {
+    padding-top: 1.1rem; /* a touch more breathing room */
+  }
+  
+  /* Layout: icon left, content right */
+  .success-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.9rem;
+  }
+  
+  /* Checkmark badge */
+  .success-icon {
+    width: 2.25rem;
+    height: 2.25rem;
+    flex: 0 0 2.25rem;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    border: 1px solid rgba(46, 125, 50, 0.28);
+    background: rgba(46, 125, 50, 0.12);
+    font-weight: 700;
+    line-height: 1;
+  }
+  
+  /* The correct sentence should feel like the headline */
+  .success-sentence {
+    font-size: 1.25rem;
+    line-height: 1.35;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+  }
+  
+  /* Supporting text, intentionally quiet */
+  .success-subtitle {
+    margin-top: 0.35rem;
+    font-size: 0.95rem;
+    line-height: 1.45;
+    opacity: 0.75;
+  }
+  
+  /* Optional: tighten spacing below the success card if your blocks are tall */
+  .success-card + .feedback-actions {
+    margin-top: 1.25rem;
+  }
+  
+  /* Mobile: keep icon and text aligned nicely */
+  @media (max-width: 520px) {
+    .success-row {
+      gap: 0.75rem;
+    }
+  
+    .success-icon {
+      width: 2rem;
+      height: 2rem;
+      flex-basis: 2rem;
+    }
+  
+    .success-sentence {
+      font-size: 1.15rem;
+    }
+  }
+  
+
 
   
   

@@ -1,4 +1,4 @@
-# ai/evaluator.py
+# ai/evaluator.py (near the top)
 
 from __future__ import annotations
 
@@ -9,10 +9,12 @@ from typing import Literal, List, Optional, Dict, Any, Tuple
 import requests
 from openai import OpenAI
 from pydantic import BaseModel, Field
+import sqlite3
 
 client = OpenAI()
 
 Severity = Literal["error", "variant", "style"]
+DB_PATH = os.getenv("APP_DB_PATH", "data/app.db")
 
 
 class Issue(BaseModel):
@@ -34,6 +36,58 @@ class Evaluation(BaseModel):
     corrected: str = Field(..., description="Én naturlig, eksamensnær bokmålsversjon med samme mening.")
     issues: List[Issue] = Field(default_factory=list, description="Maks 3 punkter.")
     short_rule: str = Field(..., description="Én setning med viktigste regel eller råd.")
+
+def _get_db_connection():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON;")
+    return conn
+
+def get_valid_translations(sentence_id: int) -> List[str]:
+    conn = _get_db_connection()
+    rows = conn.execute(
+        "SELECT translation FROM valid_translations WHERE sentence_id = ?",
+        (sentence_id,),
+    ).fetchall()
+    conn.close()
+    return [r["translation"] for r in rows]
+
+
+def _normalize_nb(s: str) -> str:
+    """
+    Conservative normalization for Bokmål matching:
+    - trim
+    - collapse whitespace
+    - normalize curly quotes
+    - remove trailing sentence punctuation (., !, ?)
+    - lower-case
+    """
+    s = (s or "").strip()
+    s = s.replace("“", '"').replace("”", '"').replace("’", "'").replace("‘", "'")
+    s = re.sub(r"\s+", " ", s)
+
+    # Remove trailing punctuation (common in user input variance)
+    s = re.sub(r"[.!?]+$", "", s.strip())
+
+    return s.lower()
+
+
+def check_against_gold(sentence_id: int, user_norwegian: str) -> Optional[str]:
+    """
+    Returns the matched gold translation (original stored string) if it matches,
+    else None.
+    """
+    print('hitting check_against_gold')
+    gold = get_valid_translations(sentence_id)
+    if not gold:
+        return None
+
+    user_norm = _normalize_nb(user_norwegian)
+    for t in gold:
+        if _normalize_nb(t) == user_norm:
+            return t  # return the canonical stored form
+    return None
+
 
 
 # -------------------------
@@ -303,8 +357,19 @@ def _format_lt_summary(lt_json: Optional[Dict[str, Any]], original: str, max_ite
 # Core evaluation
 # -------------------------
 
-def evaluate_translation(level: str, english: str, user_norwegian: str) -> Evaluation:
-    # 0) LanguageTool first (primary arbiter for objective errors)
+def evaluate_translation(level: str, english: str, user_norwegian: str, sentence_id: Optional[int] = None) -> Evaluation:
+    # 0) Stored Translations First
+    if sentence_id is not None:
+        matched = check_against_gold(sentence_id, user_norwegian)
+        if matched is not None:
+            return Evaluation(
+                verdict="correct",
+                meaning="same",
+                corrected=matched,      # return canonical gold form
+                issues=[],
+                short_rule="Godkjent: Svaret matcher en lagret fasit (bokmål).",
+            )
+    # 0) If not storedLanguageTool (primary arbiter for objective errors)
     lt_json: Optional[Dict[str, Any]] = None
     lt_issues: List[Issue] = []
     lt_objective: List[Dict[str, Any]] = []
@@ -325,12 +390,11 @@ def evaluate_translation(level: str, english: str, user_norwegian: str) -> Evalu
 
     # 1) Pass 1: grade (LLM), with LT context
     response1 = client.responses.parse(
-        model="gpt-4o-mini",
+        model="gpt-5-mini-2025-08-07",
         input=[
             {"role": "system", "content": _grading_system_prompt()},
             {"role": "user", "content": _grading_user_prompt(level, english, user_norwegian, lt_summary)},
         ],
-        temperature=0.1,
         text_format=Evaluation,
     )
     draft: Evaluation = response1.output_parsed
@@ -365,12 +429,11 @@ def evaluate_translation(level: str, english: str, user_norwegian: str) -> Evalu
 
     # 4) Pass 2: audit / patch (LLM), with LT context, and the merged draft
     response2 = client.responses.parse(
-        model="gpt-4o-mini",
+        model="gpt-5-mini-2025-08-07",
         input=[
             {"role": "system", "content": _audit_system_prompt()},
             {"role": "user", "content": _audit_user_prompt(level, english, user_norwegian, lt_summary, draft)},
         ],
-        temperature=0.0,
         text_format=Evaluation,
     )
     ev: Evaluation = response2.output_parsed

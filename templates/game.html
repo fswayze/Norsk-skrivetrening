@@ -49,11 +49,11 @@
         {{ english_sentence }}
       </div>
     </section>
-
     <section class="answer">
       <form action="/game/submit" method="post" class="answer-form" id="answerForm">
         <!-- game/session tracking -->
         <input type="hidden" name="level" value="{{ level }}">
+        <input type="hidden" name="sentence_id" value="{{ sentence_id }}">
         <input type="hidden" name="english_sentence" value="{{ english_sentence }}">
 
         <label class="answer-label" for="norwegian">
@@ -89,24 +89,59 @@
       const overlay = document.getElementById("loadingOverlay");
       const btn = document.getElementById("submitBtn");
       const textarea = document.getElementById("norwegian");
-
+  
       if (!form || !overlay || !btn) return;
-
-      form.addEventListener("submit", function () {
-        // Show overlay
+  
+      const MIN_SPINNER_MS = 450; // tune 300–700
+  
+      form.addEventListener("submit", async function (e) {
+        e.preventDefault();
+  
+        // Show overlay immediately
+        const start = performance.now();
         overlay.classList.add("is-visible");
         overlay.setAttribute("aria-hidden", "false");
-
-        // Prevent double submissions
         btn.disabled = true;
         btn.textContent = "Sjekker…";
-
-        // Optional: lock input so user doesn't keep editing while request is in flight
         if (textarea) textarea.readOnly = true;
+  
+        try {
+          const formData = new FormData(form);
+  
+          const resp = await fetch(form.action, {
+            method: "POST",
+            body: formData,
+            credentials: "same-origin",
+            headers: {
+              "X-Requested-With": "fetch"
+            }
+          });
+  
+          const html = await resp.text();
+  
+          // Enforce minimum visible time
+          const elapsed = performance.now() - start;
+          const wait = Math.max(0, MIN_SPINNER_MS - elapsed);
+          if (wait > 0) await new Promise(r => setTimeout(r, wait));
+  
+          // Replace the page with the server response (feedback.html)
+          document.open();
+          document.write(html);
+          document.close();
+        } catch (err) {
+          // If something goes wrong, reset UI so the user can retry
+          overlay.classList.remove("is-visible");
+          overlay.setAttribute("aria-hidden", "true");
+          btn.disabled = false;
+          btn.textContent = "Sjekk";
+          if (textarea) textarea.readOnly = false;
+  
+          alert("Noe gikk galt. Prøv igjen.");
+        }
       });
-
-      // Optional: if the user comes "back" to this page via BFCache, reset UI
-      window.addEventListener("pageshow", function (e) {
+  
+      // Reset if BFCache returns user to this page
+      window.addEventListener("pageshow", function () {
         overlay.classList.remove("is-visible");
         overlay.setAttribute("aria-hidden", "true");
         btn.disabled = false;
@@ -115,5 +150,6 @@
       });
     })();
   </script>
+  
 </body>
 </html>
