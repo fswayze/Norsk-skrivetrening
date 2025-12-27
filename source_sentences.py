@@ -13,7 +13,7 @@ A1_SEED = [
 
     ("Yesterday I was tired.", ["I går var jeg trøtt.", "I går var jeg sliten."]),
     ("I ate breakfast at home.", ["Jeg spiste frokost hjemme."]),
-    ("I went to school.", ["Jeg gikk på skolen.", "Jeg dro til skolen."]),
+    ("I went to school.", ["Jeg gikk på skolen.", "Jeg dro til skolen.", "Jeg gikk til skolen."]),
     ("I watched TV in the evening.", ["Jeg så på TV om kvelden.", "Jeg så TV om kvelden."]),
     ("I slept well.", ["Jeg sov godt."]),
 

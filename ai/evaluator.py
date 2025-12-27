@@ -357,7 +357,13 @@ def _format_lt_summary(lt_json: Optional[Dict[str, Any]], original: str, max_ite
 # Core evaluation
 # -------------------------
 
-def evaluate_translation(level: str, english: str, user_norwegian: str, sentence_id: Optional[int] = None) -> Evaluation:
+def evaluate_translation(
+    level: str,
+    english: str,
+    user_norwegian: str,
+    sentence_id: Optional[int] = None
+) -> Evaluation:
+
     # 0) Stored Translations First
     if sentence_id is not None:
         matched = check_against_gold(sentence_id, user_norwegian)
@@ -365,100 +371,80 @@ def evaluate_translation(level: str, english: str, user_norwegian: str, sentence
             return Evaluation(
                 verdict="correct",
                 meaning="same",
-                corrected=matched,      # return canonical gold form
+                corrected=matched,
                 issues=[],
                 short_rule="Godkjent: Svaret matcher en lagret fasit (bokmål).",
             )
-    # 0) If not storedLanguageTool (primary arbiter for objective errors)
+
+    # 1) LanguageTool (objective arbiter)
     lt_json: Optional[Dict[str, Any]] = None
     lt_issues: List[Issue] = []
     lt_objective: List[Dict[str, Any]] = []
+
     try:
         lt_json = _languagetool_check(user_norwegian)
         lt_issues, lt_objective = _lt_to_issues(lt_json, user_norwegian)
     except Exception:
-        # If LT fails, we proceed with LLM-only; do not crash evaluation
-        print("LT fails")
         lt_json = None
         lt_issues = []
         lt_objective = []
 
-    print(lt_json)
-    print(lt_issues)
-
     lt_summary = _format_lt_summary(lt_json, user_norwegian)
 
-    # 1) Pass 1: grade (LLM), with LT context
-    response1 = client.responses.parse(
+    # 2) Single LLM pass: grading
+    response = client.responses.parse(
         model="gpt-5-mini-2025-08-07",
         input=[
             {"role": "system", "content": _grading_system_prompt()},
-            {"role": "user", "content": _grading_user_prompt(level, english, user_norwegian, lt_summary)},
+            {"role": "user", "content": _grading_user_prompt(
+                level, english, user_norwegian, lt_summary
+            )},
         ],
         text_format=Evaluation,
     )
-    draft: Evaluation = response1.output_parsed
-    print(draft)
 
-    # 2) Merge: ensure LT objective errors are represented (within max 3)
-    # Prefer LT issues over LLM issues when LT found objective errors.
+    ev: Evaluation = response.output_parsed
+
+    # 3) Merge LT issues (objective errors win)
     merged: List[Issue] = []
+
     if lt_issues:
         merged.extend(lt_issues)
-    # Add remaining LLM issues if room, but avoid duplicates by fix/category overlap
-    for iss in draft.issues:
+
+    for iss in ev.issues:
         if len(merged) >= 3:
             break
-        dup = any((iss.category == m.category and iss.fix == m.fix) for m in merged)
+        dup = any(
+            iss.category == m.category and iss.fix == m.fix
+            for m in merged
+        )
         if not dup:
             merged.append(iss)
 
-    draft.issues = merged[:3]
-    print (draft.issues)
+    ev.issues = merged[:3]
 
-    # 3) Verdict arbitration: LanguageTool sets a floor if it found objective errors
+    # 4) Verdict arbitration via LT floor
     floor = _lt_verdict_floor(lt_objective)
 
-    if floor is not None:
-        # If LT saw objective errors, we do not allow 'correct'
-        if floor == "minor" and draft.verdict == "correct":
-            draft.verdict = "minor"
-        elif floor == "incorrect":
-            draft.verdict = "incorrect"
-        
-
-    # 4) Pass 2: audit / patch (LLM), with LT context, and the merged draft
-    response2 = client.responses.parse(
-        model="gpt-5-mini-2025-08-07",
-        input=[
-            {"role": "system", "content": _audit_system_prompt()},
-            {"role": "user", "content": _audit_user_prompt(level, english, user_norwegian, lt_summary, draft)},
-        ],
-        text_format=Evaluation,
-    )
-    ev: Evaluation = response2.output_parsed
-
-    # 5) Post-audit enforcement: re-apply LT floor + ensure LT objective issues aren't lost
-    if len(ev.issues) > 3:
-        ev.issues = ev.issues[:3]
-
-    # If LT has objective issues but audit dropped them all, re-inject up to 2 LT errors
-    if lt_issues and not any(i.severity == "error" for i in ev.issues):
-        reinject = [i for i in lt_issues if i.severity == "error"]
-        ev.issues = (reinject + ev.issues)[:3]
-
-    floor = _lt_verdict_floor(lt_objective)
     if floor is not None:
         if floor == "minor" and ev.verdict == "correct":
             ev.verdict = "minor"
         elif floor == "incorrect":
             ev.verdict = "incorrect"
 
-    # If LT has no objective issues and meaning is the same, don't allow none correct verdict
-    error_count = sum(1 for issue in ev.issues if issue.severity == "error")
-    if len(lt_objective) == 0 and ev.meaning == 'same' and error_count == 0:
-        print('hitting correction override')
-        ev.verdict = "correct"
+    # 5) Reinjection safety: ensure LT objective errors are not lost
+    if lt_issues and not any(i.severity == "error" for i in ev.issues):
+        reinject = [i for i in lt_issues if i.severity == "error"]
+        ev.issues = (reinject + ev.issues)[:3]
 
+    # 6) Final correctness override
+    error_count = sum(1 for i in ev.issues if i.severity == "error")
+
+    if (
+        len(lt_objective) == 0
+        and ev.meaning == "same"
+        and error_count == 0
+    ):
+        ev.verdict = "correct"
 
     return ev
