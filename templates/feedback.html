@@ -102,11 +102,33 @@
     {% endif %}
 
     <section class="feedback-actions">
-      <!-- Use a real form submit OR a link, not both. -->
-      <form action="/game/next" method="post">
-        <button type="submit">Neste</button>
+      <form id="nextForm" action="/game/next" method="post">
+        <button id="submitBtn" type="submit">Neste</button>
       </form>
     </section>
   </main>
+  <script>
+    (function () {
+      const form = document.getElementById("nextForm");
+      const btn = document.getElementById("submitBtn");
+      window.addEventListener("keydown", function (e) {
+        if (e.isComposing) return;
+        console.log('hitting key down');
+        if (e.key === "Enter") {
+          console.log('hitting enter');
+          e.preventDefault();
+    
+          if (btn.disabled) return;
+    
+          if (form.requestSubmit) {
+            form.requestSubmit();
+          } else {
+            form.submit();
+          }
+        }
+      });
+    })();
+    </script>
+    
 </body>
 </html>

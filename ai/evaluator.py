@@ -10,7 +10,6 @@ import requests
 from openai import OpenAI
 from pydantic import BaseModel, Field
 import sqlite3
-from datetime import datetime
 
 client = OpenAI()
 
@@ -365,9 +364,6 @@ def evaluate_translation(
 ) -> Evaluation:
 
     # 0) Stored Translations First
-    now = datetime.now()
-    current_time = now.strftime("%H:%M:%S")
-    print("Before Dumb Check", current_time)
     if sentence_id is not None:
         matched = check_against_gold(sentence_id, user_norwegian)
         if matched is not None:
@@ -378,10 +374,6 @@ def evaluate_translation(
                 issues=[],
                 short_rule="Godkjent: Svaret matcher en lagret fasit (bokmål).",
             )
-
-        now = datetime.now()
-        current_time = now.strftime("%H:%M:%S")
-        print("Before LanguageTool Check", current_time)
 
     # 1) LanguageTool (objective arbiter)
     lt_json: Optional[Dict[str, Any]] = None
@@ -397,10 +389,6 @@ def evaluate_translation(
         lt_objective = []
 
     lt_summary = _format_lt_summary(lt_json, user_norwegian)
-
-    now = datetime.now()
-    current_time = now.strftime("%H:%M:%S")
-    print("Before LMM Pass", current_time)
 
     # 2) Single LLM pass: grading
     response = client.responses.parse(
@@ -450,10 +438,6 @@ def evaluate_translation(
 
     # 6) Final correctness override
     error_count = sum(1 for i in ev.issues if i.severity == "error")
-
-    now = datetime.now()
-    current_time = now.strftime("%H:%M:%S")
-    print("Finished Evaluation", current_time)
 
     if (
         len(lt_objective) == 0

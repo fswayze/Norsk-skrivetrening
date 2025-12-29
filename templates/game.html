@@ -100,14 +100,11 @@
       const btn = document.getElementById("submitBtn");
       const textarea = document.getElementById("norwegian");
   
-      // These should exist in your overlay HTML:
-      // <div class="loading-title" id="loadingTitle">...</div>
-      // <div class="loading-subtitle" id="loadingSubtitle">...</div>
       const loadingTitle = document.getElementById("loadingTitle");
   
       if (!form || !overlay || !btn) return;
   
-      const MIN_SPINNER_MS = 450; // tune 300–700
+      const MIN_SPINNER_MS = 450;
   
       // ---- Staged loading copy (drop-in logic) ----
       const STAGES = [
