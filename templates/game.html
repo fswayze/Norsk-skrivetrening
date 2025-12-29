@@ -7,47 +7,23 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-  <!-- Loading overlay (hidden by default) -->
   <div id="loadingOverlay" class="loading-overlay" aria-hidden="true">
     <div class="loading-card" role="status" aria-live="polite" aria-busy="true">
-<!-- Progress bar (segmented) -->
-<div class="loading-progress" aria-hidden="true">
-  <div class="loading-progress-track" role="presentation">
-    <div class="loading-progress-fill" id="progressFill"></div>
-
-    <!-- segment dividers (purely visual) -->
-    <div class="loading-progress-divider d1"></div>
-    <div class="loading-progress-divider d2"></div>
-    <div class="loading-progress-divider d3"></div>
-  </div>
-        <div class="loading-steps" id="loadingSteps">
-          <div class="loading-step is-active" data-step="0">
-            <span class="step-icon" aria-hidden="true">✓</span>
-            <span class="step-label">Grammatikk</span>
-          </div>
-          <div class="loading-step" data-step="1">
-            <span class="step-icon" aria-hidden="true">✓</span>
-            <span class="step-label">Ordstilling</span>
-          </div>
-          <div class="loading-step" data-step="2">
-            <span class="step-icon" aria-hidden="true">✓</span>
-            <span class="step-label">Sammenligning</span>
-          </div>
-          <div class="loading-step" data-step="3">
-            <span class="step-icon" aria-hidden="true">✓</span>
-            <span class="step-label">Tilbakemelding</span>
-          </div>
-        </div>
+      <div>
+          <img
+              src="{{ url_for('static', filename='troll.png') }}"
+              class="troll-img"
+              alt="Writing Troll"
+              loading="eager"
+              decoding="async"
+          />
       </div>
-      <div class="loading-title" id="loadingTitle">
-        Analyserer grammatikken…
-      </div>
+      <div class="loading-title" id="loadingTitle">Analyserer grammatikken...</div>
       <div class="loading-subtitle" id="loadingSubtitle">
-        Dette kan ta opptil 40 sekunder fordi vi gir grundig tilbakemelding.
+        Dette kan ta opptil 40 sekunder
       </div>
     </div>
   </div>
-
   <main class="game">
     <header class="game-header">
       <h1 class="game-title">Norsk Skrivetrening</h1>
@@ -128,18 +104,13 @@
   
       // ---- Staged loading copy (drop-in logic) ----
       const STAGES = [
-  { title: "Analyserer grammatikken…", labelStep: 0, pct: 20 },
-  { title: "Sjekker ordstilling og bøying…", labelStep: 1, pct: 45 },
-  { title: "Sammenligner med gode eksempler…", labelStep: 2, pct: 70 },
-  { title: "Forbereder tilbakemelding…", labelStep: 3, pct: 92 }
-];
+        { title: "Analyserer grammatikken...", labelStep: 0, pct: 20 },
+        { title: "Sjekker ordstilling og bøying...", labelStep: 1, pct: 45 },
+        { title: "Sammenligner med gode eksempler...", labelStep: 2, pct: 70 },
+        { title: "Forbereder tilbakemelding...", labelStep: 3, pct: 92 }
+      ];
 
 let stageTimer = null;
-
-function setProgress(pct) {
-  if (!progressFill) return;
-  progressFill.style.width = `${pct}%`;
-}
 
 function setStepState(activeIndex) {
   if (!stepsEl) return;
@@ -150,25 +121,27 @@ function setStepState(activeIndex) {
   });
 }
 
+
 function startLoadingStages() {
   if (!loadingTitle) return;
 
   let i = 0;
+
   loadingTitle.textContent = STAGES[i].title;
   setStepState(STAGES[i].labelStep);
-  setProgress(STAGES[i].pct);
 
   stageTimer = window.setInterval(() => {
     i += 1;
+
     if (i < STAGES.length) {
       loadingTitle.textContent = STAGES[i].title;
       setStepState(STAGES[i].labelStep);
-      setProgress(STAGES[i].pct);
     } else {
       stopLoadingStages();
     }
   }, 7500);
 }
+
 
 function stopLoadingStages() {
   if (stageTimer) {
@@ -181,7 +154,6 @@ function stopLoadingStages() {
 function finishLoadingStages() {
   // Mark all complete and fill to 100% for a satisfying finish
   setStepState(4);
-  setProgress(100);
 }
       // --------------------------------------------
   
@@ -280,7 +252,6 @@ function finishLoadingStages() {
         overlay.setAttribute("aria-hidden", "true");
         btn.disabled = false;
         btn.textContent = "Sjekk";
-        setProgress(0);
         setStepState(0);
         if (textarea) textarea.readOnly = false;
       });
