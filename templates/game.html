@@ -10,7 +10,35 @@
   <!-- Loading overlay (hidden by default) -->
   <div id="loadingOverlay" class="loading-overlay" aria-hidden="true">
     <div class="loading-card" role="status" aria-live="polite" aria-busy="true">
-      <div class="loading-spinner" aria-hidden="true"></div>
+<!-- Progress bar (segmented) -->
+<div class="loading-progress" aria-hidden="true">
+  <div class="loading-progress-track" role="presentation">
+    <div class="loading-progress-fill" id="progressFill"></div>
+
+    <!-- segment dividers (purely visual) -->
+    <div class="loading-progress-divider d1"></div>
+    <div class="loading-progress-divider d2"></div>
+    <div class="loading-progress-divider d3"></div>
+  </div>
+        <div class="loading-steps" id="loadingSteps">
+          <div class="loading-step is-active" data-step="0">
+            <span class="step-icon" aria-hidden="true">✓</span>
+            <span class="step-label">Grammatikk</span>
+          </div>
+          <div class="loading-step" data-step="1">
+            <span class="step-icon" aria-hidden="true">✓</span>
+            <span class="step-label">Ordstilling</span>
+          </div>
+          <div class="loading-step" data-step="2">
+            <span class="step-icon" aria-hidden="true">✓</span>
+            <span class="step-label">Sammenligning</span>
+          </div>
+          <div class="loading-step" data-step="3">
+            <span class="step-icon" aria-hidden="true">✓</span>
+            <span class="step-label">Tilbakemelding</span>
+          </div>
+        </div>
+      </div>
       <div class="loading-title" id="loadingTitle">
         Analyserer grammatikken…
       </div>
@@ -68,16 +96,11 @@
         <textarea
           id="norwegian"
           name="norwegian"
-          rows="6"
+          rows="2"
           required
           placeholder="Skriv setningen på norsk…"
           autofocus
         ></textarea>
-
-        <!-- Microcopy (Enter-to-submit hint) -->
-        <p class="answer-microcopy" id="submitHint">
-          Enter = send inn · Shift+Enter = ny linje
-        </p>
 
         <div class="answer-actions">
           <button type="submit" id="submitBtn">Sjekk</button>
@@ -85,12 +108,6 @@
         </div>
       </form>
     </section>
-
-    <footer class="game-footer">
-      <p class="game-note">
-        Tips: Sikt på naturlig norsk. Småfeil teller — dette er prøvemodus.
-      </p>
-    </footer>
   </main>
 
   <script>
@@ -99,6 +116,9 @@
       const overlay = document.getElementById("loadingOverlay");
       const btn = document.getElementById("submitBtn");
       const textarea = document.getElementById("norwegian");
+      const progressFill = document.getElementById("progressFill");
+      const stepsEl = document.getElementById("loadingSteps");
+
   
       const loadingTitle = document.getElementById("loadingTitle");
   
@@ -108,36 +128,61 @@
   
       // ---- Staged loading copy (drop-in logic) ----
       const STAGES = [
-        "Analyserer grammatikken…",
-        "Sjekker ordstilling og bøying…",
-        "Sammenligner med gode eksempler…",
-        "Forbereder tilbakemelding…"
-      ];
-  
-      let stageTimer = null;
-  
-      function startLoadingStages() {
-        if (!loadingTitle) return;
-        let i = 0;
-        loadingTitle.textContent = STAGES[i];
-  
-        // Advance every ~7.5s so the last stage tends to be the longest.
-        stageTimer = window.setInterval(() => {
-          i += 1;
-          if (i < STAGES.length) {
-            loadingTitle.textContent = STAGES[i];
-          } else {
-            stopLoadingStages();
-          }
-        }, 7500);
-      }
-  
-      function stopLoadingStages() {
-        if (stageTimer) {
-          window.clearInterval(stageTimer);
-          stageTimer = null;
-        }
-      }
+  { title: "Analyserer grammatikken…", labelStep: 0, pct: 20 },
+  { title: "Sjekker ordstilling og bøying…", labelStep: 1, pct: 45 },
+  { title: "Sammenligner med gode eksempler…", labelStep: 2, pct: 70 },
+  { title: "Forbereder tilbakemelding…", labelStep: 3, pct: 92 }
+];
+
+let stageTimer = null;
+
+function setProgress(pct) {
+  if (!progressFill) return;
+  progressFill.style.width = `${pct}%`;
+}
+
+function setStepState(activeIndex) {
+  if (!stepsEl) return;
+  const nodes = stepsEl.querySelectorAll(".loading-step");
+  nodes.forEach((node, idx) => {
+    node.classList.toggle("is-active", idx === activeIndex);
+    node.classList.toggle("is-complete", idx < activeIndex);
+  });
+}
+
+function startLoadingStages() {
+  if (!loadingTitle) return;
+
+  let i = 0;
+  loadingTitle.textContent = STAGES[i].title;
+  setStepState(STAGES[i].labelStep);
+  setProgress(STAGES[i].pct);
+
+  stageTimer = window.setInterval(() => {
+    i += 1;
+    if (i < STAGES.length) {
+      loadingTitle.textContent = STAGES[i].title;
+      setStepState(STAGES[i].labelStep);
+      setProgress(STAGES[i].pct);
+    } else {
+      stopLoadingStages();
+    }
+  }, 7500);
+}
+
+function stopLoadingStages() {
+  if (stageTimer) {
+    window.clearInterval(stageTimer);
+    stageTimer = null;
+  }
+}
+
+/* Call this right before you swap to the feedback HTML */
+function finishLoadingStages() {
+  // Mark all complete and fill to 100% for a satisfying finish
+  setStepState(4);
+  setProgress(100);
+}
       // --------------------------------------------
   
       // Enter = submit, Shift+Enter = newline
@@ -159,60 +204,74 @@
       }
   
       form.addEventListener("submit", async function (e) {
-        e.preventDefault();
-  
-        // Show overlay immediately
-        const start = performance.now();
-        overlay.classList.add("is-visible");
-        overlay.setAttribute("aria-hidden", "false");
-  
-        // Start staged loading messages
-        startLoadingStages();
-  
-        btn.disabled = true;
-        btn.textContent = "Sjekker…";
-        if (textarea) textarea.readOnly = true;
-  
-        try {
-          const formData = new FormData(form);
-  
-          const resp = await fetch(form.action, {
-            method: "POST",
-            body: formData,
-            credentials: "same-origin",
-            headers: {
-              "X-Requested-With": "fetch"
-            }
-          });
-  
-          const html = await resp.text();
-  
-          // Enforce minimum visible time
-          const elapsed = performance.now() - start;
-          const wait = Math.max(0, MIN_SPINNER_MS - elapsed);
-          if (wait > 0) await new Promise(r => setTimeout(r, wait));
-  
-          // Stop staged loading messages before swapping pages
-          stopLoadingStages();
-  
-          // Replace the page with the server response (feedback.html)
-          document.open();
-          document.write(html);
-          document.close();
-        } catch (err) {
-          // Stop staged loading messages on error
-          stopLoadingStages();
-  
-          // If something goes wrong, reset UI so the user can retry
-          overlay.classList.remove("is-visible");
-          overlay.setAttribute("aria-hidden", "true");
-          btn.disabled = false;
-          btn.textContent = "Sjekk";
-          if (textarea) textarea.readOnly = false;
-  
-          alert("Noe gikk galt. Prøv igjen.");
-        }
-      });
+  e.preventDefault();
+
+  const start = performance.now();
+  const OVERLAY_DELAY_MS = 160; // show only if it’s not instant
+  let overlayShown = false;
+
+  // Schedule overlay to appear a bit later (prevents flashing on fast responses)
+  const overlayTimer = window.setTimeout(() => {
+    overlayShown = true;
+
+    overlay.classList.add("is-visible");
+    overlay.setAttribute("aria-hidden", "false");
+
+    startLoadingStages();
+  }, OVERLAY_DELAY_MS);
+
+  // Disable inputs immediately to avoid double-submits
+  btn.disabled = true;
+  btn.textContent = "Sjekker…";
+  if (textarea) textarea.readOnly = true;
+
+  try {
+    const formData = new FormData(form);
+
+    const resp = await fetch(form.action, {
+      method: "POST",
+      body: formData,
+      credentials: "same-origin",
+      headers: { "X-Requested-With": "fetch" }
+    });
+
+    const html = await resp.text();
+
+    // If request finished quickly, prevent overlay from showing
+    window.clearTimeout(overlayTimer);
+
+    // If overlay did show, enforce minimum visible time
+    if (overlayShown) {
+      const elapsed = performance.now() - start;
+      const wait = Math.max(0, MIN_SPINNER_MS - elapsed);
+      if (wait > 0) await new Promise(r => setTimeout(r, wait));
+
+      stopLoadingStages();
+      finishLoadingStages();
+    }
+
+    // Replace the page with the server response (feedback.html)
+    document.open();
+    document.write(html);
+    document.close();
+  } catch (err) {
+    // Ensure overlay won't pop in after an error
+    window.clearTimeout(overlayTimer);
+
+    if (overlayShown) {
+      stopLoadingStages();
+      overlay.classList.remove("is-visible");
+      overlay.setAttribute("aria-hidden", "true");
+    }
+
+    btn.disabled = false;
+    btn.textContent = "Sjekk";
+    if (textarea) textarea.readOnly = false;
+
+    alert("Noe gikk galt. Prøv igjen.");
+  }
+});
+
   
       // Reset if BFCache returns user to this page
       window.addEventListener("pageshow", function () {
@@ -221,6 +280,8 @@
         overlay.setAttribute("aria-hidden", "true");
         btn.disabled = false;
         btn.textContent = "Sjekk";
+        setProgress(0);
+        setStepState(0);
         if (textarea) textarea.readOnly = false;
       });
     })();

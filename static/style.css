@@ -206,7 +206,7 @@ body {
   
   .answer-form textarea {
     width: 100%;
-    min-height: 220px;
+    min-height: 110px;
   }
   
   .answer-actions {
@@ -467,7 +467,7 @@ body {
 }
 
 .loading-card{
-  width: min(520px, 92vw);
+  width: min(600px, 92vw);
   border-radius: 18px;
   padding: 18px 18px 16px;
   border: 1px solid rgba(0,0,0,.12);
@@ -489,23 +489,105 @@ body {
   opacity: .8;
 }
 
-.loading-spinner{
-  width: 38px;
-  height: 38px;
-  margin: 0 auto;
-  border-radius: 999px;
-  border: 3px solid rgba(0,0,0,.18);
-  border-top-color: rgba(0,0,0,.75);
-  animation: spin 0.9s linear infinite;
+/* ---------- Loading progress (segmented bar) ---------- */
+
+.loading-progress{
+  margin: 14px 0 6px;
 }
 
-@keyframes spin{
-  to { transform: rotate(360deg); }
+.loading-progress-track{
+  position: relative;
+  width: 100%;
+  height: 16px;
+  border-radius: 999px;
+  background: rgba(0,0,0,.10);
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.08);
+}
+
+.loading-progress-fill{
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0%;
+  height: 100%;
+  border-radius: 999px;
+  background: rgba(0,0,0,.70);
+  transition: width 600ms ease;
+}
+
+/* Visual segment dividers (4 segments => 3 dividers) */
+.loading-progress-divider{
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 2px;
+  background: rgba(255,255,255,.55);
+  opacity: .7;
+}
+.loading-progress-divider.d1{ left: 25%; }
+.loading-progress-divider.d2{ left: 50%; }
+.loading-progress-divider.d3{ left: 75%; }
+
+.loading-steps{
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.loading-step{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  opacity: .55;
+  transition: opacity 250ms ease;
+  min-width: 0;
+}
+
+.loading-step .step-label{
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.loading-step .step-icon{
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: rgba(0,0,0,.10);
+  color: rgba(0,0,0,.0); /* hidden until completed */
+  font-weight: 700;
+  line-height: 1;
+  transition: background 250ms ease, color 250ms ease, transform 250ms ease;
+}
+
+/* Active = user sees where we are */
+.loading-step.is-active{
+  opacity: .95;
+}
+
+/* Complete = checkmark becomes visible */
+.loading-step.is-complete{
+  opacity: .95;
+}
+.loading-step.is-complete .step-icon{
+  background: rgba(0,0,0,.70);
+  color: rgba(255,255,255,.95);
+}
+
+/* Optional: slightly emphasize active but not complete */
+.loading-step.is-active:not(.is-complete) .step-icon{
+  background: rgba(0,0,0,.18);
+  color: rgba(0,0,0,.0);
 }
 
 /* Respect reduced motion */
 @media (prefers-reduced-motion: reduce){
-  .loading-spinner{ animation: none; }
+  .loading-progress-fill{ transition: none; }
+  .loading-step, .loading-step .step-icon{ transition: none; }
 }
 
 /* -----------------------------
