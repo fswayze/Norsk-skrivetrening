@@ -215,18 +215,15 @@ def game_submit():
     user_norwegian = request.form.get("norwegian", "").strip()
     english_sentence = request.form.get("english_sentence", "").strip()
     sentence_id = request.form.get("sentence_id")
-    print(sentence_id, '218')
     evaluation = evaluate_translation(
         game_state["level"],
         english_sentence,
         user_norwegian,
         sentence_id
     )
-    print(evaluation)
 
     verdict = evaluation.verdict
 
-    print(verdict)
 
     # Update counters
     game_state["turns_at_level"] += 1

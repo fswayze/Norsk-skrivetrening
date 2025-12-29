@@ -11,8 +11,12 @@
   <div id="loadingOverlay" class="loading-overlay" aria-hidden="true">
     <div class="loading-card" role="status" aria-live="polite" aria-busy="true">
       <div class="loading-spinner" aria-hidden="true"></div>
-      <div class="loading-title">Sjekker svaret ditt…</div>
-      <div class="loading-subtitle">Dette tar ofte 1–3 sekunder.</div>
+      <div class="loading-title" id="loadingTitle">
+        Analyserer grammatikken…
+      </div>
+      <div class="loading-subtitle" id="loadingSubtitle">
+        Dette kan ta opptil 40 sekunder fordi vi gir grundig tilbakemelding.
+      </div>
     </div>
   </div>
 
@@ -49,6 +53,7 @@
         {{ english_sentence }}
       </div>
     </section>
+
     <section class="answer">
       <form action="/game/submit" method="post" class="answer-form" id="answerForm">
         <!-- game/session tracking -->
@@ -68,6 +73,11 @@
           placeholder="Skriv setningen på norsk…"
           autofocus
         ></textarea>
+
+        <!-- Microcopy (Enter-to-submit hint) -->
+        <p class="answer-microcopy" id="submitHint">
+          Enter = send inn · Shift+Enter = ny linje
+        </p>
 
         <div class="answer-actions">
           <button type="submit" id="submitBtn">Sjekk</button>
@@ -90,9 +100,66 @@
       const btn = document.getElementById("submitBtn");
       const textarea = document.getElementById("norwegian");
   
+      // These should exist in your overlay HTML:
+      // <div class="loading-title" id="loadingTitle">...</div>
+      // <div class="loading-subtitle" id="loadingSubtitle">...</div>
+      const loadingTitle = document.getElementById("loadingTitle");
+  
       if (!form || !overlay || !btn) return;
   
       const MIN_SPINNER_MS = 450; // tune 300–700
+  
+      // ---- Staged loading copy (drop-in logic) ----
+      const STAGES = [
+        "Analyserer grammatikken…",
+        "Sjekker ordstilling og bøying…",
+        "Sammenligner med gode eksempler…",
+        "Forbereder tilbakemelding…"
+      ];
+  
+      let stageTimer = null;
+  
+      function startLoadingStages() {
+        if (!loadingTitle) return;
+        let i = 0;
+        loadingTitle.textContent = STAGES[i];
+  
+        // Advance every ~7.5s so the last stage tends to be the longest.
+        stageTimer = window.setInterval(() => {
+          i += 1;
+          if (i < STAGES.length) {
+            loadingTitle.textContent = STAGES[i];
+          } else {
+            stopLoadingStages();
+          }
+        }, 7500);
+      }
+  
+      function stopLoadingStages() {
+        if (stageTimer) {
+          window.clearInterval(stageTimer);
+          stageTimer = null;
+        }
+      }
+      // --------------------------------------------
+  
+      // Enter = submit, Shift+Enter = newline
+      if (textarea) {
+        textarea.addEventListener("keydown", function (e) {
+          // Avoid interfering with IME composition (important for some keyboards)
+          if (e.isComposing) return;
+  
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+  
+            // Avoid double-submits while loading
+            if (btn.disabled) return;
+  
+            // Trigger the existing submit handler (which shows overlay + fetch)
+            form.requestSubmit ? form.requestSubmit(btn) : form.submit();
+          }
+        });
+      }
   
       form.addEventListener("submit", async function (e) {
         e.preventDefault();
@@ -101,6 +168,10 @@
         const start = performance.now();
         overlay.classList.add("is-visible");
         overlay.setAttribute("aria-hidden", "false");
+  
+        // Start staged loading messages
+        startLoadingStages();
+  
         btn.disabled = true;
         btn.textContent = "Sjekker…";
         if (textarea) textarea.readOnly = true;
@@ -124,11 +195,17 @@
           const wait = Math.max(0, MIN_SPINNER_MS - elapsed);
           if (wait > 0) await new Promise(r => setTimeout(r, wait));
   
+          // Stop staged loading messages before swapping pages
+          stopLoadingStages();
+  
           // Replace the page with the server response (feedback.html)
           document.open();
           document.write(html);
           document.close();
         } catch (err) {
+          // Stop staged loading messages on error
+          stopLoadingStages();
+  
           // If something goes wrong, reset UI so the user can retry
           overlay.classList.remove("is-visible");
           overlay.setAttribute("aria-hidden", "true");
@@ -142,6 +219,7 @@
   
       // Reset if BFCache returns user to this page
       window.addEventListener("pageshow", function () {
+        stopLoadingStages();
         overlay.classList.remove("is-visible");
         overlay.setAttribute("aria-hidden", "true");
         btn.disabled = false;
@@ -151,5 +229,6 @@
     })();
   </script>
   
+
 </body>
 </html>
