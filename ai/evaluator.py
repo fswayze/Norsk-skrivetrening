@@ -436,7 +436,7 @@ def evaluate_translation(
         reinject = [i for i in lt_issues if i.severity == "error"]
         ev.issues = (reinject + ev.issues)[:3]
 
-    6) Final correctness override
+    # 6) Final correctness override
     error_count = sum(1 for i in ev.issues if i.severity == "error")
 
     if (
