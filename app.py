@@ -17,8 +17,6 @@ load_dotenv()
 app.secret_key = os.getenv("FLASK_SECRET_KEY")
 
 
-LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"]
-
 with app.app_context():
     init_db()
     seed_db()

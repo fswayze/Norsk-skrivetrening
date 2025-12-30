@@ -7,36 +7,32 @@
 </head>
 <body>
   <main class="result">
-    <header class="result-header">
+    <!-- <header class="result-header">
       <h1>Resultat</h1>
-      <p class="result-subhead">Dette er nivået spillet ditt endte på.</p>
-    </header>
-
-    <section class="result-score">
-      <div class="score-label">Nivå</div>
-      <div class="score-value">{{ level }}</div>
-
-      {% if end_reason %}
-        <p class="score-reason">
-          {% if end_reason == "two_incorrect" %}
-            Spillet stoppet fordi du hadde to feil på rad.
-          {% elif end_reason == "no_progress" %}
-            Spillet stoppet fordi du ikke rykket opp innen fem forsøk på dette nivået.
-          {% else %}
-            Spillet stoppet.
-          {% endif %}
-        </p>
-      {% endif %}
-    </section>
+    </header> -->
+    <img
+      src="{{ url_for('static', filename='result_troll.png') }}"
+      class="welcome-troll-img"
+      alt="Writing Troll"
+      loading="eager"
+      decoding="async"
+    />
+    <p class="result-subhead">
+      Du fikk en nivå av <strong>{{ level }}</strong>,
+      {% if end_reason == "two_incorrect" %}
+      spillet stoppet fordi du hadde to feil på rad.
+      {% elif end_reason == "no_progress" %}
+        spillet stoppet fordi du ikke rykket opp innen fem forsøk på dette nivået.
+      {% else %}
+      .
+      {% endif %} 
+    </p>
 
     <section class="result-actions">
       <form action="/game/start" method="post">
         <button type="submit">Spill igjen</button>
       </form>
-
-      <div class="result-links">
-        <a href="/">Til forsiden</a>
-      </div>
+      <a href="/" class="result-link">Til forsiden</a>
     </section>
   </main>
 </body>

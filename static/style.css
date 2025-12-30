@@ -1,5 +1,5 @@
 body {
-    background: #f8f5ef;
+    background: rgb(254, 247, 241);
     color: #1e1e1e;
     font-family: Georgia, serif;
     line-height: 1.6;
@@ -244,6 +244,7 @@ body {
   .result-subhead {
     margin-top: 0;
     color: rgba(0,0,0,0.7);
+    text-align: center;
   }
   
   .result-score {
@@ -269,7 +270,7 @@ body {
   
   .score-reason {
     margin-top: 0.75rem;
-    color: rgba(0,0,0,0.75);
+    color: rgba(0,0,0,0.7 5);
   }
   
   .result-next {
@@ -287,13 +288,13 @@ body {
   
   .result-actions {
     margin-top: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   
-  .result-links {
-    margin-top: 1rem;
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
+  .result-link {
+    margin-left: 10px;
   }
   
   .result-footer {
@@ -495,10 +496,68 @@ body {
   opacity: .8;
 }
 
+/* --- Subtle pulse animation --- */
+@keyframes soft-pulse {
+  0% {
+    opacity: 0.75;
+  }
+  50% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0.75;
+  }
+}
+
+/* Apply to loading title */
+.loading-title {
+  animation: soft-pulse 2.6s ease-in-out infinite;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .loading-title {
+    animation: none;
+  }
+}
+
+@keyframes card-breathe {
+  0% {
+    transform: translateY(0);
+    box-shadow: 0 18px 50px rgba(0,0,0,.22);
+  }
+  50% {
+    transform: translateY(-2px);
+    box-shadow: 0 22px 55px rgba(0,0,0,.24);
+  }
+  100% {
+    transform: translateY(0);
+    box-shadow: 0 18px 50px rgba(0,0,0,.22);
+  }
+}
+
+.loading-card {
+  animation: card-breathe 3.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-card {
+    animation: none;
+  }
+}
+
+
+
 .troll-img {
   display: block;
   margin: 0 auto 14px;
   width: 300px;
+}
+
+.welcome-troll-img {
+  width: 600px;
+  display: block;
+  margin: 0 auto 14px;
 }
 
 

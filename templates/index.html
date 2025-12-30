@@ -5,15 +5,22 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>NorskSkrivetrening</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
 </head>
 <body class="book">
   <main class="page">
-    <header>
+    <!-- <header>
       <h1>
         Norsk Skrivetrening
       </h1>
-      <div class="ornament" aria-hidden="true">✶ ✶ ✶</div>
-    </header>
+    </header> -->
+    <img
+      src="{{ url_for('static', filename='welcome_troll.png') }}"
+      class="welcome-troll-img"
+      alt="Writing Troll"
+      loading="eager"
+      decoding="async"
+    />
 
     <p class="lede">En kort språkspill som tester grammatikk og flyt gjennom oversettelse.</p>
 
