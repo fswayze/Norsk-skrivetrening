@@ -404,39 +404,39 @@ def evaluate_translation(
 
     ev: Evaluation = response.output_parsed
 
-    # # 3) Merge LT issues (objective errors win)
-    # merged: List[Issue] = []
+    # 3) Merge LT issues (objective errors win)
+    merged: List[Issue] = []
 
-    # if lt_issues:
-    #     merged.extend(lt_issues)
+    if lt_issues:
+        merged.extend(lt_issues)
 
-    # for iss in ev.issues:
-    #     if len(merged) >= 3:
-    #         break
-    #     dup = any(
-    #         iss.category == m.category and iss.fix == m.fix
-    #         for m in merged
-    #     )
-    #     if not dup:
-    #         merged.append(iss)
+    for iss in ev.issues:
+        if len(merged) >= 3:
+            break
+        dup = any(
+            iss.category == m.category and iss.fix == m.fix
+            for m in merged
+        )
+        if not dup:
+            merged.append(iss)
 
-    # ev.issues = merged[:3]
+    ev.issues = merged[:3]
 
-    # # 4) Verdict arbitration via LT floor
-    # floor = _lt_verdict_floor(lt_objective)
+    # 4) Verdict arbitration via LT floor
+    floor = _lt_verdict_floor(lt_objective)
 
-    # if floor is not None:
-    #     if floor == "minor" and ev.verdict == "correct":
-    #         ev.verdict = "minor"
-    #     elif floor == "incorrect":
-    #         ev.verdict = "incorrect"
+    if floor is not None:
+        if floor == "minor" and ev.verdict == "correct":
+            ev.verdict = "minor"
+        elif floor == "incorrect":
+            ev.verdict = "incorrect"
 
-    # # 5) Reinjection safety: ensure LT objective errors are not lost
-    # if lt_issues and not any(i.severity == "error" for i in ev.issues):
-    #     reinject = [i for i in lt_issues if i.severity == "error"]
-    #     ev.issues = (reinject + ev.issues)[:3]
+    # 5) Reinjection safety: ensure LT objective errors are not lost
+    if lt_issues and not any(i.severity == "error" for i in ev.issues):
+        reinject = [i for i in lt_issues if i.severity == "error"]
+        ev.issues = (reinject + ev.issues)[:3]
 
-    # 6) Final correctness override
+    6) Final correctness override
     error_count = sum(1 for i in ev.issues if i.severity == "error")
 
     if (
