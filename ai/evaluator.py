@@ -1,5 +1,3 @@
-# ai/evaluator.py (near the top)
-
 from __future__ import annotations
 
 import os
@@ -10,11 +8,20 @@ import requests
 from openai import OpenAI
 from pydantic import BaseModel, Field
 import sqlite3
+import hashlib
+import json
+import unicodedata
+
 
 client = OpenAI()
 
 Severity = Literal["error", "variant", "style"]
 DB_PATH = os.getenv("APP_DB_PATH", "data/app.db")
+MODEL_ID = "gpt-5-nano-2025-08-07"
+LT_ENDPOINT = os.getenv("LANGUAGETOOL_ENDPOINT", "https://api.languagetool.org/v2/check")
+LT_LANGUAGE = os.getenv("LANGUAGETOOL_LANGUAGE", "nb")  # Bokmål
+PROMPT_VERSION = "grading-v1.1"   # bump when you change prompts/rubric
+LT_VERSION = f"{LT_LANGUAGE}|{LT_ENDPOINT}|v1"
 
 
 class Issue(BaseModel):
@@ -87,14 +94,92 @@ def check_against_gold(sentence_id: int, user_norwegian: str) -> Optional[str]:
             return t  # return the canonical stored form
     return None
 
+def _normalize_cache_key(s: str) -> str:
+    s = unicodedata.normalize("NFKC", (s or ""))
+    s = s.strip().lower()
+    s = s.replace("“", '"').replace("”", '"').replace("’", "'").replace("‘", "'")
+    s = re.sub(r"\s+", " ", s)
+    return s
 
+def _sha256_hex(s: str) -> str:
+    return hashlib.sha256(s.encode("utf-8")).hexdigest()
+
+def _make_signature(level: str, sentence_id: int, translation_hash: str) -> str:
+    return f"{level}-{sentence_id}-{MODEL_ID}-{PROMPT_VERSION}-{translation_hash[:12]}-{LT_LANGUAGE}"
+
+def _cache_get(level: str, sentence_id: int, user_norwegian: str) -> Optional[Tuple[Evaluation, int]]:
+    norm = _normalize_cache_key(user_norwegian)
+    thash = _sha256_hex(norm)
+    sig = _make_signature(level, sentence_id, thash)
+
+    conn = _get_db_connection()
+    row = conn.execute(
+        """
+        SELECT id, feedback_json
+        FROM translation_feedback
+        WHERE signature = ?
+        """,
+        (sig,),
+    ).fetchone()
+
+    if row:
+        conn.execute(
+            "UPDATE translation_feedback SET hit_count = hit_count + 1 WHERE id = ?",
+            (row["id"],),
+        )
+        conn.commit()
+        conn.close()
+
+        data = json.loads(row["feedback_json"])
+        ev = Evaluation.model_validate(data)
+        return ev, int(row["id"])
+
+    conn.close()
+    return None
+
+
+
+def _cache_put(level: str, sentence_id: int, user_norwegian: str, ev: Evaluation) -> int:
+    norm = _normalize_cache_key(user_norwegian)
+    thash = _sha256_hex(norm)
+    sig = _make_signature(level, sentence_id, thash)
+
+    conn = _get_db_connection()
+
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO translation_feedback (
+            signature, level, sentence_id,
+            model_id, prompt_version,
+            translation_norm, translation_hash,
+            verdict, feedback_json
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            sig, level, sentence_id,
+            MODEL_ID, PROMPT_VERSION,
+            norm, thash,
+            ev.verdict, json.dumps(ev.model_dump(), ensure_ascii=False),
+        ),
+    )
+
+    row = conn.execute(
+        "SELECT id FROM translation_feedback WHERE signature = ?",
+        (sig,),
+    ).fetchone()
+
+    conn.commit()
+    conn.close()
+
+    if row is None:
+        raise RuntimeError("Failed to read back translation_feedback after insert/ignore")
+
+    return int(row["id"])
 
 # -------------------------
 # LanguageTool integration
 # -------------------------
-
-LT_ENDPOINT = os.getenv("LANGUAGETOOL_ENDPOINT", "https://api.languagetool.org/v2/check")
-LT_LANGUAGE = os.getenv("LANGUAGETOOL_LANGUAGE", "nb")  # Bokmål
 
 
 def _languagetool_check(text: str, timeout_s: float = 4.0) -> Dict[str, Any]:
@@ -224,7 +309,7 @@ def _grading_system_prompt() -> str:
     return (
         "Du er en konsekvent og rubrikkstyrt sensor for norskprøven skriftlig (bokmål). "
         "Du vurderer én enkelt setning oversatt fra engelsk til norsk. "
-        "Fokus: grammatikk, ordstilling (V2), bøying, preposisjoner, idiomatisk språk, register og rettskriving. "
+        "Fokus: grammatikk, betydning, ordstilling (V2), bøying, preposisjoner, idiomatisk språk, register og rettskriving. "
         "VIKTIG: Ikke motsi deg selv. Hvis flere løsninger er akseptable, "
         "skal dette merkes som 'variant' og ikke kalles feil. "
         "VIKTIG PRESISJON: Marker bare severity='error' når brukerens form er ugrammatisk, bryter en klar regel "
@@ -272,6 +357,20 @@ ISSUES:
 - severity='style' betyr: valgfri forbedring, ikke grammatikkfeil.
 - Ikke del opp én feil i flere issues. Én språklig feil → maks ett issue.
 - Prioritér objektive feil (rettskriving/grammatikk) over stil.
+
+BETYDNING:
+- meaning:
+  - same:
+    Brukerens setning uttrykker samme faktiske innhold og intensjon som den engelske.
+    Små grammatikkfeil, ordvalg eller uidiomatisk språk teller IKKE som betydningsendring.
+  - minor_drift:
+    Hovedmeningen er bevart, men én nyanse er endret, svekket eller forsterket
+    (f.eks. tid, grad, aspekt, modalitet, hvem som handler, eller om noe er sikkert vs. mulig).
+    Setningen kan fortsatt forstås som "omtrent riktig".
+  - different:
+    Meningen er endret, uklar eller feil.
+    Viktig informasjon er lagt til, fjernet eller forvekslet,
+    eller setningen kan misforstås uten kontekst.
 
 OUTPUT:
 - corrected: én naturlig, eksamensnær bokmålsversjon (samme mening).
@@ -361,19 +460,30 @@ def evaluate_translation(
     english: str,
     user_norwegian: str,
     sentence_id: Optional[int] = None
-) -> Evaluation:
-
-    # 0) Stored Translations First
+) -> Tuple[Evaluation, Optional[int]]:
+    """
+    Returns (Evaluation, feedback_id). feedback_id is None if sentence_id is None.
+    """
+    # 0) Stored translations first
     if sentence_id is not None:
         matched = check_against_gold(sentence_id, user_norwegian)
         if matched is not None:
-            return Evaluation(
+            ev = Evaluation(
                 verdict="correct",
                 meaning="same",
                 corrected=matched,
                 issues=[],
                 short_rule="Godkjent: Svaret matcher en lagret fasit (bokmål).",
             )
+            feedback_id = _cache_put(level, sentence_id, user_norwegian, ev)
+            return ev, feedback_id
+
+    # 0b) Cache check
+    if sentence_id is not None:
+        cached = _cache_get(level, sentence_id, user_norwegian)
+        if cached is not None:
+            ev, feedback_id = cached
+            return ev, feedback_id
 
     # 1) LanguageTool (objective arbiter)
     lt_json: Optional[Dict[str, Any]] = None
@@ -392,12 +502,10 @@ def evaluate_translation(
 
     # 2) Single LLM pass: grading
     response = client.responses.parse(
-        model="gpt-5-nano-2025-08-07",
+        model=MODEL_ID,
         input=[
             {"role": "system", "content": _grading_system_prompt()},
-            {"role": "user", "content": _grading_user_prompt(
-                level, english, user_norwegian, lt_summary
-            )},
+            {"role": "user", "content": _grading_user_prompt(level, english, user_norwegian, lt_summary)},
         ],
         text_format=Evaluation,
     )
@@ -406,17 +514,13 @@ def evaluate_translation(
 
     # 3) Merge LT issues (objective errors win)
     merged: List[Issue] = []
-
     if lt_issues:
         merged.extend(lt_issues)
 
     for iss in ev.issues:
         if len(merged) >= 3:
             break
-        dup = any(
-            iss.category == m.category and iss.fix == m.fix
-            for m in merged
-        )
+        dup = any(iss.category == m.category and iss.fix == m.fix for m in merged)
         if not dup:
             merged.append(iss)
 
@@ -424,26 +528,24 @@ def evaluate_translation(
 
     # 4) Verdict arbitration via LT floor
     floor = _lt_verdict_floor(lt_objective)
-
     if floor is not None:
         if floor == "minor" and ev.verdict == "correct":
             ev.verdict = "minor"
         elif floor == "incorrect":
             ev.verdict = "incorrect"
 
-    # 5) Reinjection safety: ensure LT objective errors are not lost
+    # 5) Reinjection safety
     if lt_issues and not any(i.severity == "error" for i in ev.issues):
         reinject = [i for i in lt_issues if i.severity == "error"]
         ev.issues = (reinject + ev.issues)[:3]
 
     # 6) Final correctness override
     error_count = sum(1 for i in ev.issues if i.severity == "error")
-
-    if (
-        len(lt_objective) == 0
-        and ev.meaning == "same"
-        and error_count == 0
-    ):
+    if len(lt_objective) == 0 and ev.meaning == "same" and error_count == 0:
         ev.verdict = "correct"
 
-    return ev
+    if sentence_id is not None:
+        feedback_id = _cache_put(level, sentence_id, user_norwegian, ev)
+        return ev, feedback_id
+
+    return ev, None

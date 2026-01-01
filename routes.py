@@ -7,6 +7,8 @@ from flask import render_template, request, redirect, url_for, session
 
 from db import get_db_connection
 from ai.evaluator import evaluate_translation
+import json
+from collections import defaultdict
 
 LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"]
 
@@ -97,6 +99,50 @@ def get_game(game_id: int) -> Optional[Dict[str, Any]]:
 
     # Convert sqlite Row -> plain dict
     return dict(row)
+
+def insert_translation_attempt(
+    game_id: int,
+    *,
+    sentence_id: int,
+    level: str,
+    english_sentence: str,
+    user_norwegian: str,
+    verdict: str,
+    feedback_id: int,
+) -> int:
+    """
+    Insert a translation attempt row. Returns the attempt id.
+    """
+    conn = get_db_connection()
+    conn.execute("PRAGMA foreign_keys = ON;")
+
+    cur = conn.execute(
+        """
+        INSERT INTO translation_attempts (
+            game_id,
+            sentence_id,
+            level,
+            english_sentence,
+            user_norwegian,
+            verdict,
+            feedback_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            game_id,
+            sentence_id,
+            level,
+            english_sentence,
+            user_norwegian,
+            verdict,
+            feedback_id,
+        ),
+    )
+    conn.commit()
+    attempt_id = int(cur.lastrowid)
+    conn.close()
+    return attempt_id
+
 
 
 def update_game(game_id: int, **fields: Any) -> None:
@@ -208,13 +254,32 @@ def register_routes(app):
         if sentence_id_raw and str(sentence_id_raw).isdigit():
             sentence_id = int(sentence_id_raw)
 
-        evaluation = evaluate_translation(
+        if sentence_id is None:
+            # This should not happen in your game flow; fail loudly while developing
+            raise ValueError("Missing sentence_id on submit; cannot save translation_attempt")
+
+        evaluation, feedback_id = evaluate_translation(
             game_state["level"],
             english_sentence,
             user_norwegian,
             sentence_id=sentence_id,
         )
+
+        if feedback_id is None:
+            raise RuntimeError("evaluate_translation returned no feedback_id")
+
         verdict = evaluation.verdict
+
+        # Save attempt immediately (before redirect/render)
+        insert_translation_attempt(
+            int(game_id),
+            sentence_id=sentence_id,
+            level=game_state["level"],
+            english_sentence=english_sentence,
+            user_norwegian=user_norwegian,
+            verdict=verdict,
+            feedback_id=feedback_id,
+        )
 
         # Update counters (in memory first)
         turns_at_level = int(game_state["turns_at_level"]) + 1
@@ -342,27 +407,57 @@ def register_routes(app):
 
         game = conn.execute(
             """
-            SELECT
-                id,
-                level,
-                correct_streak,
-                incorrect_streak,
-                turns_at_level,
-                last_sentence_id,
-                status,
-                end_reason,
-                started_at,
-                ended_at
+            SELECT id, level, correct_streak, incorrect_streak, turns_at_level,
+                status, end_reason, started_at, ended_at
             FROM games
             WHERE id = ?
             """,
             (game_id,),
         ).fetchone()
 
-        conn.close()
-
         if game is None:
+            conn.close()
             return redirect(url_for("history"))
 
-        return render_template("history_detail.html", game=game)
+        rows = conn.execute(
+            """
+            SELECT
+                ta.id AS attempt_id,
+                ta.level AS attempt_level,
+                ta.created_at,
+                ta.sentence_id,
+                ta.english_sentence,
+                ta.user_norwegian,
+                ta.verdict,
+                tf.feedback_json
+            FROM translation_attempts ta
+            JOIN translation_feedback tf ON tf.id = ta.feedback_id
+            WHERE ta.game_id = ?
+            ORDER BY ta.id ASC
+            """,
+            (game_id,),
+        ).fetchall()
+
+        conn.close()
+        print(rows)
+
+        # Group attempts by level and decode evaluation JSON for template use
+        grouped = defaultdict(list)
+        for r in rows:
+            d = dict(r)
+            try:
+                d["evaluation"] = json.loads(d["feedback_json"]) if d.get("feedback_json") else {}
+            except Exception:
+                d["evaluation"] = {}
+            grouped[d["attempt_level"]].append(d)
+
+        # Keep order A1..C2
+        LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"]
+        attempts_by_level = [(lvl, grouped[lvl]) for lvl in LEVELS if grouped.get(lvl)]
+
+        return render_template(
+            "history_detail.html",
+            game=game,
+            attempts_by_level=attempts_by_level,
+        )
 

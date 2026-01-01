@@ -34,6 +34,92 @@
         <li><strong>Avsluttet:</strong> {{ game["ended_at"] or "-" }}</li>
       </ul>
     </section>
+    <section class="attempts">
+      <h2>Forsøk</h2>
+    
+      {% if not attempts_by_level %}
+        <p>Ingen lagrede forsøk for dette spillet ennå.</p>
+      {% else %}
+    
+        {% for level, attempts in attempts_by_level %}
+          <details class="level-group" open>
+            <summary class="level-summary">
+              <strong>{{ level }}</strong>
+              <span class="level-count">({{ attempts|length }})</span>
+            </summary>
+    
+            <div class="level-body">
+              {% for a in attempts %}
+                <details class="sentence-group">
+                  <summary class="sentence-summary">
+                    <span class="sentence-title">Setning {{ loop.index }}</span>
+                    <span class="sentence-meta">
+                      {{ a["verdict"]|capitalize }} · {{ a["created_at"] }}
+                    </span>
+                  </summary>
+    
+                  <div class="sentence-body">
+                    <div class="block">
+                      <div class="label">Engelsk</div>
+                      <div class="text">{{ a["english_sentence"] }}</div>
+                    </div>
+    
+                    <div class="block">
+                      <div class="label">Ditt svar</div>
+                      <div class="text">{{ a["user_norwegian"] }}</div>
+                    </div>
+    
+                    {% set ev = a["evaluation"] %}
+    
+                    {% if ev.get("corrected") %}
+                      <div class="block">
+                        <div class="label">Korrigert</div>
+                        <div class="text">{{ ev["corrected"] }}</div>
+                      </div>
+                    {% endif %}
+    
+                    {% if ev.get("short_rule") %}
+                      <div class="block">
+                        <div class="label">Kort regel</div>
+                        <div class="text">{{ ev["short_rule"] }}</div>
+                      </div>
+                    {% endif %}
+    
+                    {% if ev.get("issues") %}
+                      <div class="block">
+                        <div class="label">Tilbakemelding</div>
+                        <ul class="issues">
+                          {% for issue in ev["issues"] %}
+                            <li class="issue">
+                              <div class="issue-head">
+                                <strong>{{ issue.get("category", "Issue") }}</strong>
+                                <span class="pill">{{ issue.get("severity", "") }}</span>
+                              </div>
+                              {% if issue.get("explanation") %}
+                                <div class="issue-text">{{ issue["explanation"] }}</div>
+                              {% endif %}
+                              {% if issue.get("fix") %}
+                                <div class="issue-fix"><em>Forslag:</em> {{ issue["fix"] }}</div>
+                              {% endif %}
+                            </li>
+                          {% endfor %}
+                        </ul>
+                      </div>
+                    {% else %}
+                      <div class="block">
+                        <div class="label">Tilbakemelding</div>
+                        <div class="text">Ingen issues.</div>
+                      </div>
+                    {% endif %}
+                  </div>
+                </details>
+              {% endfor %}
+            </div>
+          </details>
+        {% endfor %}
+    
+      {% endif %}
+    </section>    
   </main>
 </body>
 </html>
