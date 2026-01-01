@@ -14,14 +14,13 @@
       loading="eager"
       decoding="async"
     />
+    <p class="result-subhead"><strong>Nivå: {{ level }}</strong></p>
     <p class="result-subhead">
-      Du fikk en nivå av <strong>{{ level }}</strong>,
       {% if end_reason == "two_incorrect" %}
-      spillet stoppet fordi du hadde to feil på rad.
+      Spillet stoppet fordi du hadde to feil på rad.
       {% elif end_reason == "no_progress" %}
-        spillet stoppet fordi du ikke rykket opp innen fem forsøk på dette nivået.
+      Spillet stoppet fordi du ikke rykket opp innen fem forsøk på dette nivået.
       {% else %}
-      .
       {% endif %} 
     </p>
 

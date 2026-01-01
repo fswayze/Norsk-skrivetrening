@@ -392,7 +392,7 @@ def evaluate_translation(
 
     # 2) Single LLM pass: grading
     response = client.responses.parse(
-        model="gpt-5-mini-2025-08-07",
+        model="gpt-5-nano-2025-08-07",
         input=[
             {"role": "system", "content": _grading_system_prompt()},
             {"role": "user", "content": _grading_user_prompt(
