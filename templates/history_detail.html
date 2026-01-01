@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8">
+  <title>Spill #{{ game["id"] }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  {% include "_header.html" %}
+  <main class="history-detail">
+    <header class="history-header">
+      <h1>Spill #{{ game["id"] }}</h1>
+    </header>
+    {% macro format_datetime(dt) -%}
+    {% if dt %}
+        {{ dt[8:10] }}.{{ dt[5:7] }}.{{ dt[0:4] }} {{ dt[11:16] }}
+    {% else %}
+        -
+    {% endif %}
+    {%- endmacro %}
+    <section class="history-card">
+      <ul>
+        <li><strong>Status:</strong> {{ game["status"] }}</li>
+        <li><strong>Nivå:</strong> {{ game["level"] }}</li>
+        <li><strong>Riktig-streak på nivå:</strong> {{ game["correct_streak"] }}</li>
+        <li><strong>Feil-streak på nivå:</strong> {{ game["incorrect_streak"] }}</li>
+        <li><strong>Runder på nivå:</strong> {{ game["turns_at_level"] }}</li>
+        {% set END_REASON_LABELS = {
+          "two_incorrect": "Two incorrect answers",
+          "no_progress": "No progress",
+        } %}
+        <li><strong>Sluttårsak:</strong> {{ END_REASON_LABELS.get(game["end_reason"], "Ended") }}</li>
+        <li><strong>Startet:</strong> {{ game["started_at"] }}</li>
+        <li><strong>Avsluttet:</strong> {{ game["ended_at"] or "-" }}</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

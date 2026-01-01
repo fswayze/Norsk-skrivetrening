@@ -21,7 +21,8 @@ SEED_BY_LEVEL = {
 
 def get_db_connection():
     connection = sqlite3.connect(DB_PATH)
-    connection.row_factory = sqlite3.Row  # gjør at vi kan lese kolonner med navn
+    connection.row_factory = sqlite3.Row 
+    connection.execute("PRAGMA foreign_keys = ON;")
     return connection
 
 def init_db():

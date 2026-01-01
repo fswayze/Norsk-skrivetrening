@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Any, Dict
 
 from flask import render_template, request, redirect, url_for, session
 
@@ -9,18 +9,6 @@ from db import get_db_connection
 from ai.evaluator import evaluate_translation
 
 LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"]
-
-
-def new_game_state():
-    return {
-        "game_id": datetime.now().isoformat(timespec="seconds"),
-        "level": "A1",
-        "correct_streak": 0,
-        "incorrect_streak": 0,
-        "turns_at_level": 0,
-        "last_sentence_id": None,
-        "status": "active",
-    }
 
 
 def pick_sentence(level: str, avoid_id=None):
@@ -34,7 +22,6 @@ def pick_sentence(level: str, avoid_id=None):
 
     row = None
 
-    # First try: avoid repeating the previous sentence
     if avoid_id is not None:
         row = connection.execute(
             """
@@ -48,7 +35,6 @@ def pick_sentence(level: str, avoid_id=None):
             (level, avoid_id),
         ).fetchone()
 
-    # Fallback: no avoid_id provided or only one sentence exists at this level
     if row is None:
         row = connection.execute(
             """
@@ -69,6 +55,97 @@ def pick_sentence(level: str, avoid_id=None):
     return {"id": row["id"], "english": row["sentence"]}
 
 
+# -----------------------------
+# DB helpers for games
+# -----------------------------
+
+def create_game() -> int:
+    started_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    conn = get_db_connection()
+    conn.execute("PRAGMA foreign_keys = ON;")
+    cur = conn.execute(
+        """
+        INSERT INTO games (level, correct_streak, incorrect_streak, turns_at_level,
+                           last_sentence_id, status, end_reason, started_at)
+        VALUES ('A1', 0, 0, 0, NULL, 'active', NULL, ?)
+        """,
+        (started_at,),
+    )
+    conn.commit()
+    game_id = cur.lastrowid
+    conn.close()
+    return int(game_id)
+
+def get_game(game_id: int) -> Optional[Dict[str, Any]]:
+    conn = get_db_connection()
+    conn.execute("PRAGMA foreign_keys = ON;")
+
+    row = conn.execute(
+        """
+        SELECT id, level, correct_streak, incorrect_streak, turns_at_level, last_sentence_id,
+               status, end_reason, started_at, ended_at
+        FROM games
+        WHERE id = ?
+        """,
+        (game_id,),
+    ).fetchone()
+
+    conn.close()
+    if row is None:
+        return None
+
+    # Convert sqlite Row -> plain dict
+    return dict(row)
+
+
+def update_game(game_id: int, **fields: Any) -> None:
+    """
+    Updates a game row with the provided fields.
+
+    Example:
+        update_game(game_id, last_sentence_id=10, correct_streak=1)
+    """
+    if not fields:
+        return
+
+    allowed = {
+        "level",
+        "correct_streak",
+        "incorrect_streak",
+        "turns_at_level",
+        "last_sentence_id",
+        "status",
+        "end_reason",
+        "ended_at",
+    }
+    for k in list(fields.keys()):
+        if k not in allowed:
+            raise ValueError(f"Disallowed field for games update: {k}")
+
+    cols = ", ".join([f"{k} = ?" for k in fields.keys()])
+    vals = list(fields.values())
+
+    conn = get_db_connection()
+    conn.execute("PRAGMA foreign_keys = ON;")
+    conn.execute(
+        f"UPDATE games SET {cols} WHERE id = ?",
+        (*vals, game_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def end_game(game_id: int, reason: str) -> None:
+    # ended_at stored as ISO string consistent with your code style
+    ended_at = datetime.now().isoformat(timespec="seconds")
+    update_game(game_id, status="ended", end_reason=reason, ended_at=ended_at)
+
+
+# -----------------------------
+# Routes
+# -----------------------------
+
 def register_routes(app):
     @app.route("/", methods=["GET"])
     def index():
@@ -76,14 +153,19 @@ def register_routes(app):
 
     @app.route("/game/start", methods=["POST"])
     def game_start():
-        session["game"] = new_game_state()
+        game_id = create_game()
+        session["game_id"] = game_id
         return redirect(url_for("game"))
 
     @app.route("/game", methods=["GET"])
     def game():
-        game_state = session.get("game")
+        game_id = session.get("game_id")
+        if not game_id:
+            return redirect(url_for("index"))
 
-        if not game_state or game_state.get("status") != "active":
+        game_state = get_game(int(game_id))
+        if not game_state:
+            session.pop("game_id", None)
             return redirect(url_for("index"))
 
         if game_state.get("status") == "ended":
@@ -91,13 +173,18 @@ def register_routes(app):
 
         sentence = pick_sentence(
             game_state["level"],
-            avoid_id=game_state.get("last_sentence_id")
+            avoid_id=game_state.get("last_sentence_id"),
         )
+
+        # persist last_sentence_id
+        update_game(int(game_id), last_sentence_id=sentence["id"])
+
+        # refresh game state (optional, but keeps template context accurate)
         game_state["last_sentence_id"] = sentence["id"]
-        session["game"] = game_state
 
         context = {
             **game_state,
+            "game_id": int(game_id),
             "sentence_id": sentence["id"],
             "english_sentence": sentence["english"],
         }
@@ -105,7 +192,11 @@ def register_routes(app):
 
     @app.route("/game/submit", methods=["POST"])
     def game_submit():
-        game_state = session.get("game")
+        game_id = session.get("game_id")
+        if not game_id:
+            return redirect(url_for("index"))
+
+        game_state = get_game(int(game_id))
         if not game_state or game_state.get("status") != "active":
             return redirect(url_for("index"))
 
@@ -121,50 +212,72 @@ def register_routes(app):
             game_state["level"],
             english_sentence,
             user_norwegian,
-            sentence_id=sentence_id,   # IMPORTANT: pass as int/None
+            sentence_id=sentence_id,
         )
-
         verdict = evaluation.verdict
 
-        # Update counters
-        game_state["turns_at_level"] += 1
+        # Update counters (in memory first)
+        turns_at_level = int(game_state["turns_at_level"]) + 1
+        correct_streak = int(game_state["correct_streak"])
+        incorrect_streak = int(game_state["incorrect_streak"])
+        level = game_state["level"]
 
         if verdict == "correct":
-            game_state["correct_streak"] += 1
-            game_state["incorrect_streak"] = 0
+            correct_streak += 1
+            incorrect_streak = 0
         elif verdict == "incorrect":
-            game_state["incorrect_streak"] += 1
-            game_state["correct_streak"] = 0
+            incorrect_streak += 1
+            correct_streak = 0
         else:  # minor
-            game_state["correct_streak"] = 0
-            game_state["incorrect_streak"] = 0
+            correct_streak = 0
+            incorrect_streak = 0
 
-        # End conditions
         ended = False
         reason = None
 
-        if game_state["incorrect_streak"] >= 2:
+        if incorrect_streak >= 2:
             ended = True
             reason = "two_incorrect"
-        elif game_state["turns_at_level"] >= 5 and game_state["correct_streak"] < 2:
+        elif turns_at_level >= 5 and correct_streak < 2:
             ended = True
             reason = "no_progress"
 
-        # Level up
-        if not ended and game_state["correct_streak"] >= 2:
-            current = game_state["level"]
-            idx = LEVELS.index(current)
+        # Level up logic
+        if not ended and correct_streak >= 2:
+            idx = LEVELS.index(level)
             if idx < len(LEVELS) - 1:
-                game_state["level"] = LEVELS[idx + 1]
-            game_state["correct_streak"] = 0
-            game_state["incorrect_streak"] = 0
-            game_state["turns_at_level"] = 0
+                level = LEVELS[idx + 1]
 
-        if ended:
-            game_state["status"] = "ended"
-            game_state["end_reason"] = reason
+            # Reset for next level
+            correct_streak = 0
+            incorrect_streak = 0
+            turns_at_level = 0
 
-        session["game"] = game_state
+        # Persist state
+        if ended and reason:
+            end_game(int(game_id), reason)
+            update_game(
+                int(game_id),
+                level=level,
+                correct_streak=correct_streak,
+                incorrect_streak=incorrect_streak,
+                turns_at_level=turns_at_level,
+            )
+        else:
+            update_game(
+                int(game_id),
+                level=level,
+                correct_streak=correct_streak,
+                incorrect_streak=incorrect_streak,
+                turns_at_level=turns_at_level,
+                status="active",
+                end_reason=None,
+                ended_at=None,
+            )
+
+        # Reload final state for rendering
+        game_state = get_game(int(game_id)) or {}
+        # If ended_at/end_reason are useful in template, they’ll be present.
 
         return render_template(
             "feedback.html",
@@ -176,15 +289,80 @@ def register_routes(app):
 
     @app.route("/game/next", methods=["POST"])
     def game_next():
-        game_state = session.get("game")
+        game_id = session.get("game_id")
+        if not game_id:
+            return redirect(url_for("index"))
+
+        game_state = get_game(int(game_id))
         if game_state and game_state.get("status") == "ended":
             return redirect(url_for("game_result"))
+
         return redirect(url_for("game"))
 
     @app.route("/game/result", methods=["GET"])
     def game_result():
-        game_state = session.get("game")
+        game_id = session.get("game_id")
+        if not game_id:
+            return redirect(url_for("index"))
+
+        game_state = get_game(int(game_id))
         if not game_state or game_state.get("status") != "ended":
             return redirect(url_for("index"))
 
         return render_template("game_result.html", **game_state)
+
+    @app.route("/history", methods=["GET"])
+    def history():
+        conn = get_db_connection()
+        conn.execute("PRAGMA foreign_keys = ON;")
+
+        games = conn.execute(
+            """
+            SELECT
+                id,
+                level,
+                status,
+                end_reason,
+                started_at,
+                ended_at
+            FROM games
+            ORDER BY datetime(started_at) DESC, id DESC
+            LIMIT 200
+            """
+        ).fetchall()
+
+        conn.close()
+
+        return render_template("history.html", games=games)
+
+    @app.route("/history/<int:game_id>", methods=["GET"])
+    def history_detail(game_id: int):
+        conn = get_db_connection()
+        conn.execute("PRAGMA foreign_keys = ON;")
+
+        game = conn.execute(
+            """
+            SELECT
+                id,
+                level,
+                correct_streak,
+                incorrect_streak,
+                turns_at_level,
+                last_sentence_id,
+                status,
+                end_reason,
+                started_at,
+                ended_at
+            FROM games
+            WHERE id = ?
+            """,
+            (game_id,),
+        ).fetchone()
+
+        conn.close()
+
+        if game is None:
+            return redirect(url_for("history"))
+
+        return render_template("history_detail.html", game=game)
+

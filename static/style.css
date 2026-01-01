@@ -640,6 +640,39 @@ body {
     }
   }
 
+.history, .history-detail { padding: 24px; max-width: 900px; margin: 0 auto; }
+.history-table { width: 100%; border-collapse: collapse; }
+.history-table th, .history-table td { border-bottom: 1px solid rgba(0,0,0,.12); padding: 10px 8px; text-align: left; }
+.history-card { padding: 16px; border: 1px solid rgba(0,0,0,.12); border-radius: 12px; }
+
+.site-header {
+  padding: 16px 24px;
+}
+
+.site-nav {
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  gap: 20px;
+}
+
+.nav-link {
+  text-decoration: none;
+  font-weight: 500;
+  color: inherit;
+  border-bottom: 1px solid transparent;
+}
+
+.nav-link:hover {
+  border-bottom-color: currentColor;
+}
+.nav-link.active {
+  border-bottom-color: currentColor;
+}
+
+
+
+
   
   
   
