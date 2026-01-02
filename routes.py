@@ -9,6 +9,7 @@ from db import get_db_connection
 from ai.evaluator import evaluate_translation
 import json
 from collections import defaultdict
+from pprint import pprint
 
 LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"]
 
@@ -454,6 +455,7 @@ def register_routes(app):
         # Keep order A1..C2
         LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"]
         attempts_by_level = [(lvl, grouped[lvl]) for lvl in LEVELS if grouped.get(lvl)]
+
 
         return render_template(
             "history_detail.html",

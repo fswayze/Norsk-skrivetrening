@@ -2,14 +2,14 @@
 <html lang="no">
 <head>
   <meta charset="utf-8">
-  <title>Spill #{{ game["id"] }}</title>
+  <title>Rundedetaljer</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
   {% include "_header.html" %}
   <main class="history-detail">
     <header class="history-header">
-      <h1>Spill #{{ game["id"] }}</h1>
+      <h1>Rundedetaljer</h1>
     </header>
     {% macro format_datetime(dt) -%}
     {% if dt %}
@@ -20,18 +20,15 @@
     {%- endmacro %}
     <section class="history-card">
       <ul>
-        <li><strong>Status:</strong> {{ game["status"] }}</li>
+        <li><strong>Status:</strong> {{ "Ferdig" if game["status"] == "ended" else "Aktiv" }}</li>
         <li><strong>Nivå:</strong> {{ game["level"] }}</li>
-        <li><strong>Riktig-streak på nivå:</strong> {{ game["correct_streak"] }}</li>
-        <li><strong>Feil-streak på nivå:</strong> {{ game["incorrect_streak"] }}</li>
-        <li><strong>Runder på nivå:</strong> {{ game["turns_at_level"] }}</li>
         {% set END_REASON_LABELS = {
-          "two_incorrect": "Two incorrect answers",
-          "no_progress": "No progress",
+          "two_incorrect": "Du ga to feil svar på rad.",
+          "no_progress": "Du klarte ikke å gi to riktige svar i løpet av fem forsøk.",
         } %}
-        <li><strong>Sluttårsak:</strong> {{ END_REASON_LABELS.get(game["end_reason"], "Ended") }}</li>
-        <li><strong>Startet:</strong> {{ game["started_at"] }}</li>
-        <li><strong>Avsluttet:</strong> {{ game["ended_at"] or "-" }}</li>
+        <li><strong>Sluttårsak:</strong> {{ END_REASON_LABELS.get(game["end_reason"], "Avsluttet") }}</li>
+        <li><strong>Startet:</strong> {{ game["started_at"] | fmt_dt}}</li>
+        <li><strong>Avsluttet:</strong> {{ game["ended_at"] | fmt_dt}}</li>
       </ul>
     </section>
     <section class="attempts">
@@ -42,10 +39,9 @@
       {% else %}
     
         {% for level, attempts in attempts_by_level %}
-          <details class="level-group" open>
+          <details class="level-group">
             <summary class="level-summary">
               <strong>{{ level }}</strong>
-              <span class="level-count">({{ attempts|length }})</span>
             </summary>
     
             <div class="level-body">
@@ -53,9 +49,19 @@
                 <details class="sentence-group">
                   <summary class="sentence-summary">
                     <span class="sentence-title">Setning {{ loop.index }}</span>
-                    <span class="sentence-meta">
-                      {{ a["verdict"]|capitalize }} · {{ a["created_at"] }}
+                    {% if a["verdict"] == "correct" %}
+                    <span class="sentence-meta correct">
+                      riktig
                     </span>
+                    {% elif a["verdict"] == "minor" %}
+                    <span class="sentence-meta minor">
+                      nesten
+                    </span>
+                    {% else %}
+                    <span class="sentence-meta incorrect">
+                      feil
+                    </span>
+                    {% endif %}
                   </summary>
     
                   <div class="sentence-body">
@@ -70,14 +76,15 @@
                     </div>
     
                     {% set ev = a["evaluation"] %}
-    
+                    
                     {% if ev.get("corrected") %}
                       <div class="block">
                         <div class="label">Korrigert</div>
                         <div class="text">{{ ev["corrected"] }}</div>
                       </div>
                     {% endif %}
-    
+                
+
                     {% if ev.get("short_rule") %}
                       <div class="block">
                         <div class="label">Kort regel</div>
@@ -104,11 +111,6 @@
                             </li>
                           {% endfor %}
                         </ul>
-                      </div>
-                    {% else %}
-                      <div class="block">
-                        <div class="label">Tilbakemelding</div>
-                        <div class="text">Ingen issues.</div>
                       </div>
                     {% endif %}
                   </div>
