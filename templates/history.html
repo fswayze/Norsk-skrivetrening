@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8">
+  <title>Historikk</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    {% include "_header.html" %}
+  <main class="history">
+    <header class="history-header">
+      <h1>Historikk</h1>
+    </header>
+    {% if not games %}
+      <p>Ingen spill funnet ennå.</p>
+    {% else %}
+      <table class="history-table">
+        <thead>
+          <tr>
+            <th>Nivå</th>
+            <th>Status</th>
+            <th>Start</th>
+            <th>Slutt</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for g in games %}
+            <tr>
+              <td>
+                <a href="{{ url_for('history_detail', game_id=g['id']) }}">
+                  {{ g["level"] }}
+                </a>
+              </td>
+              <td>{{ "Ferdig" if g["status"] == "ended" else "Aktiv" }}</td>
+              <td>{{ g["started_at"] | fmt_dt }}</td>
+                <td>{{ g["ended_at"] | fmt_dt }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
+  </main>
+</body>
+</html>

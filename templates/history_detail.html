@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8">
+  <title>Rundedetaljer</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  {% include "_header.html" %}
+  <main class="history-detail">
+    <header class="history-header">
+      <h1>Rundedetaljer</h1>
+    </header>
+    <section class="history-card">
+      <ul>
+        <li><strong>Status:</strong> {{ "Ferdig" if game["status"] == "ended" else "Aktiv" }}</li>
+        <li><strong>Nivå:</strong> {{ game["level"] }}</li>
+        {% set END_REASON_LABELS = {
+          "two_incorrect": "Du ga to feil svar på rad.",
+          "no_progress": "Du klarte ikke å gi to riktige svar i løpet av fem forsøk.",
+        } %}
+        <li><strong>Sluttårsak:</strong> {{ END_REASON_LABELS.get(game["end_reason"], "Avsluttet") }}</li>
+        <li><strong>Startet:</strong> {{ game["started_at"] | fmt_dt}}</li>
+        <li><strong>Avsluttet:</strong> {{ game["ended_at"] | fmt_dt}}</li>
+      </ul>
+    </section>
+    <section class="attempts">
+      <h2>Forsøk</h2>
+    
+      {% if not attempts_by_level %}
+        <p>Ingen lagrede forsøk for dette spillet ennå.</p>
+      {% else %}
+    
+        {% for level, attempts in attempts_by_level %}
+          <details class="level-group">
+            <summary class="level-summary">
+              <strong>{{ level }}</strong>
+            </summary>
+    
+            <div class="level-body">
+              {% for a in attempts %}
+                <details class="sentence-group">
+                  <summary class="sentence-summary">
+                    <span class="sentence-title">Setning {{ loop.index }}</span>
+                    {% if a["verdict"] == "correct" %}
+                    <span class="sentence-meta correct">
+                      riktig
+                    </span>
+                    {% elif a["verdict"] == "minor" %}
+                    <span class="sentence-meta minor">
+                      nesten
+                    </span>
+                    {% else %}
+                    <span class="sentence-meta incorrect">
+                      feil
+                    </span>
+                    {% endif %}
+                  </summary>
+    
+                  <div class="sentence-body">
+                    <div class="block">
+                      <div class="label">Engelsk</div>
+                      <div class="text">{{ a["english_sentence"] }}</div>
+                    </div>
+    
+                    <div class="block">
+                      <div class="label">Ditt svar</div>
+                      <div class="text">{{ a["user_norwegian"] }}</div>
+                    </div>
+    
+                    {% set ev = a["evaluation"] %}
+                    
+                    {% if ev.get("corrected") %}
+                      <div class="block">
+                        <div class="label">Korrigert</div>
+                        <div class="text">{{ ev["corrected"] }}</div>
+                      </div>
+                    {% endif %}
+                
+
+                    {% if ev.get("short_rule") %}
+                      <div class="block">
+                        <div class="label">Kort regel</div>
+                        <div class="text">{{ ev["short_rule"] }}</div>
+                      </div>
+                    {% endif %}
+    
+                    {% if ev.get("issues") %}
+                      <div class="block">
+                        <div class="label">Tilbakemelding</div>
+                        <ul class="issues">
+                          {% for issue in ev["issues"] %}
+                            <li class="issue">
+                              <div class="issue-head">
+                                <strong>{{ issue.get("category", "Issue") }}</strong>
+                                <span class="pill">{{ issue.get("severity", "") }}</span>
+                              </div>
+                              {% if issue.get("explanation") %}
+                                <div class="issue-text">{{ issue["explanation"] }}</div>
+                              {% endif %}
+                              {% if issue.get("fix") %}
+                                <div class="issue-fix"><em>Forslag:</em> {{ issue["fix"] }}</div>
+                              {% endif %}
+                            </li>
+                          {% endfor %}
+                        </ul>
+                      </div>
+                    {% endif %}
+                  </div>
+                </details>
+              {% endfor %}
+            </div>
+          </details>
+        {% endfor %}
+    
+      {% endif %}
+    </section>    
+  </main>
+</body>
+</html>

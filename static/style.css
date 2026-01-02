@@ -640,6 +640,349 @@ body {
     }
   }
 
+.history, .history-detail { padding: 24px; max-width: 900px; margin: 0 auto; }
+.history-table { width: 100%; border-collapse: collapse; }
+.history-table th, .history-table td { border-bottom: 1px solid rgba(0,0,0,.12); padding: 10px 8px; text-align: left; }
+.history-card { padding: 16px; border: 1px solid rgba(0,0,0,.12); border-radius: 12px; }
+
+.site-header {
+  padding: 16px 24px;
+}
+
+.site-nav {
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  gap: 20px;
+}
+
+.nav-link {
+  text-decoration: none;
+  font-weight: 500;
+  color: inherit;
+  border-bottom: 1px solid transparent;
+}
+
+.nav-link:hover {
+  border-bottom-color: currentColor;
+}
+.nav-link.active {
+  border-bottom-color: currentColor;
+}
+
+/* ============================
+   History Detail – Card System
+   ============================ */
+
+   .history-detail {
+    max-width: 820px;
+    margin: 4rem auto;
+    padding: 0 24px;
+  }
+  
+  .history-header h1 {
+    margin: 0 0 1.25rem;
+    font-size: 3rem;
+    letter-spacing: -0.02em;
+  }
+  
+  .history-card {
+    margin: 1.25rem 0 2.25rem;
+    padding: 1.1rem 1.15rem;
+    border-radius: 14px;
+    border: 1px solid rgba(0,0,0,0.12);
+    background: rgba(255,255,255,0.35);
+    box-shadow:
+      0 1px 0 rgba(0,0,0,0.05),
+      0 14px 34px rgba(0,0,0,0.06);
+  }
+  
+  .history-card ul {
+    margin: 0;
+    padding-left: 1.2rem;
+  }
+  
+  .history-card li {
+    margin: 0.25rem 0;
+    color: rgba(0,0,0,0.85);
+  }
+  
+  .attempts h2 {
+    margin: 2.25rem 0 1rem;
+    font-size: 2rem;
+    letter-spacing: -0.01em;
+  }
+  
+  /* ============================
+     Level Group (A1, A2, etc.)
+     ============================ */
+  
+  .level-group {
+    border: 0;
+    padding: 0;
+    margin: 0 0 1rem;
+  }
+  
+  .level-summary {
+    list-style: none;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  
+    padding: 0.9rem 1.0rem;
+    border-radius: 12px;
+    border: 1px solid rgba(0,0,0,0.12);
+    background: rgba(255,255,255,0.28);
+    cursor: pointer;
+  
+    transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
+  }
+  
+  .level-summary:hover {
+    background: rgba(255,255,255,0.40);
+    border-color: rgba(0,0,0,0.16);
+  }
+  
+  .level-summary strong {
+    font-size: 1.05rem;
+    letter-spacing: 0.01em;
+  }
+  
+  .level-count {
+    font-variant-numeric: tabular-nums;
+    color: rgba(0,0,0,0.65);
+  }
+  
+  /* Remove default disclosure triangle */
+  .level-summary::-webkit-details-marker {
+    display: none;
+  }
+  
+  /* Add custom chevron */
+  .level-summary::after {
+    content: "▾";
+    opacity: 0.75;
+    transform: translateY(-1px);
+    transition: transform 160ms ease;
+  }
+  
+  .level-group:not([open]) .level-summary::after {
+    transform: rotate(-90deg) translateX(1px);
+  }
+  
+  /* Inside level */
+  .level-body {
+    padding: 0.75rem 0.25rem 0.25rem;
+  }
+  
+  /* ============================
+     Sentence Card
+     ============================ */
+  
+  .sentence-group {
+    margin: 0.75rem 0;
+    border-radius: 14px;
+    border: 1px solid rgba(0,0,0,0.12);
+    background: rgba(255,255,255,0.32);
+    box-shadow:
+      0 1px 0 rgba(0,0,0,0.05),
+      0 12px 26px rgba(0,0,0,0.06);
+    overflow: hidden;
+  }
+  
+  .sentence-summary {
+    list-style: none;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  
+    padding: 0.95rem 1.0rem;
+    cursor: pointer;
+  
+    transition: background 140ms ease;
+  }
+  
+  .sentence-summary:hover {
+    background: rgba(255,255,255,0.40);
+  }
+  
+  .sentence-summary::-webkit-details-marker {
+    display: none;
+  }
+  
+  /* Title on the left */
+  .sentence-title {
+    font-weight: 650;
+    letter-spacing: -0.01em;
+  }
+  
+  /* Meta on the right */
+  .sentence-meta {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .sentence-meta.correct {
+    color: #2f5d50; /* dark desaturated teal */
+  }
+
+  .sentence-meta.minor {
+    color: #806d37; /* muted ochre / pencil */
+  }
+
+  .sentence-meta.incorrect {
+    color: #5f2929; /* faded burgundy / red pencil */
+  }
+  
+  /* Add status + chevron with pseudo-elements */
+  .sentence-summary {
+    position: relative;
+    padding-right: 2.2rem;
+  }
+  
+  .sentence-summary::after {
+    content: "▸";
+    position: absolute;
+    right: 0.95rem;
+    top: 50%;
+    transform: translateY(-50%) rotate(90deg);
+    opacity: 0.70;
+    transition: transform 160ms ease, opacity 160ms ease;
+  }
+  
+  .sentence-group:not([open]) .sentence-summary::after {
+    transform: translateY(-50%) rotate(0deg);
+    opacity: 0.55;
+  }
+  
+  /* Body */
+  .sentence-body {
+    padding: 0.95rem 1.0rem 1.05rem;
+    border-top: 1px solid rgba(0,0,0,0.10);
+  }
+  
+  /* ============================
+     Blocks inside an expanded card
+     ============================ */
+  
+  .block {
+    margin-top: 0.85rem;
+    padding: 0.85rem 0.9rem;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.38);
+    border: 1px solid rgba(0,0,0,0.10);
+  }
+  
+  .block:first-child {
+    margin-top: 0;
+  }
+  
+  .label {
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.82rem;
+    color: rgba(0,0,0,0.62);
+    margin-bottom: 0.45rem;
+  }
+  
+  .text {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: rgba(0,0,0,0.92);
+  }
+  
+  /* Make corrected sentence feel like the "answer key" */
+  .block .text {
+    font-variant-numeric: tabular-nums;
+  }
+  
+  .block:has(.label:contains("Korrigert")) .text {
+    font-size: 1.12rem;
+    font-weight: 650;
+  }
+  
+  /* ============================
+     Issues list styling
+     ============================ */
+  
+  .issues {
+    margin: 0.6rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  
+  .issue {
+    padding: 0.75rem 0;
+    border-top: 1px solid rgba(0,0,0,0.08);
+  }
+  
+  .issue:first-child {
+    border-top: 0;
+    padding-top: 0.25rem;
+  }
+  
+  .issue-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  
+  .pill {
+    display: inline-block;
+    font-size: 0.78rem;
+    letter-spacing: 0.03em;
+    padding: 0.18rem 0.55rem;
+    border-radius: 999px;
+    border: 1px solid rgba(0,0,0,0.12);
+    background: rgba(0,0,0,0.04);
+    color: rgba(0,0,0,0.72);
+    white-space: nowrap;
+  }
+  
+  .issue-text {
+    margin-top: 0.35rem;
+    color: rgba(0,0,0,0.78);
+    line-height: 1.65;
+  }
+  
+  .issue-fix {
+    margin-top: 0.4rem;
+    color: rgba(0,0,0,0.82);
+  }
+  
+  /* ============================
+     Verdict accents (optional)
+     ============================ */
+  /* Subtle colored left rail by verdict on the sentence card */
+  .sentence-group[data-verdict="Correct"] { border-left: 4px solid rgba(46, 125, 50, 0.30); }
+  .sentence-group[data-verdict="Minor"]   { border-left: 4px solid rgba(240, 173, 78, 0.30); }
+  .sentence-group[data-verdict="Incorrect"] { border-left: 4px solid rgba(184, 84, 80, 0.30); }
+  
+  /* ============================
+     Mobile
+     ============================ */
+  @media (max-width: 520px) {
+    .history-header h1 {
+      font-size: 2.25rem;
+    }
+  
+    .sentence-meta {
+      display: none; /* keep the card clean on small screens */
+    }
+  
+    .history-detail {
+      padding: 0 16px;
+      margin: 3rem auto;
+    }
+  }
+  
+
+
+
+
   
   
   

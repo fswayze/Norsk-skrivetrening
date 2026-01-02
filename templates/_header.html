@@ -1,0 +1,13 @@
+<header class="site-header">
+    <nav class="site-nav">
+      <a href="{{ url_for('index') }}"
+         class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">
+        Hjem
+      </a>
+      <a href="{{ url_for('history') }}"
+         class="nav-link {% if request.endpoint.startswith('history') %}active{% endif %}">
+        Historikk
+      </a>
+    </nav>
+  </header>
+  

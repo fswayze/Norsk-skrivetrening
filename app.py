@@ -10,6 +10,7 @@ from typing import Literal, List
 from ai.evaluator import evaluate_translation
 from db import get_db_connection, init_db, seed_db
 from routes import register_routes
+from filters import register_filters
 
 
 app = Flask(__name__)
@@ -22,3 +23,4 @@ with app.app_context():
     seed_db()
 
 register_routes(app)
+register_filters(app)
