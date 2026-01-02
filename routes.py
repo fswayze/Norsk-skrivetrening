@@ -70,8 +70,8 @@ def create_game() -> int:
     cur = conn.execute(
         """
         INSERT INTO games (level, correct_streak, incorrect_streak, turns_at_level,
-                           last_sentence_id, status, end_reason, started_at)
-        VALUES ('A1', 0, 0, 0, NULL, 'active', NULL, ?)
+                           last_sentence_id, status, end_reason, started_at, locked_sentence_id, locked_since)
+        VALUES ('A1', 0, 0, 0, NULL, 'active', NULL, ?, NULL, NULL)
         """,
         (started_at,),
     )
@@ -87,7 +87,7 @@ def get_game(game_id: int) -> Optional[Dict[str, Any]]:
     row = conn.execute(
         """
         SELECT id, level, correct_streak, incorrect_streak, turns_at_level, last_sentence_id,
-               status, end_reason, started_at, ended_at
+               status, end_reason, started_at, ended_at, locked_sentence_id, locked_since
         FROM games
         WHERE id = ?
         """,
@@ -165,6 +165,8 @@ def update_game(game_id: int, **fields: Any) -> None:
         "status",
         "end_reason",
         "ended_at",
+        "locked_sentence_id",
+        "locked_since",
     }
     for k in list(fields.keys()):
         if k not in allowed:
@@ -187,6 +189,19 @@ def end_game(game_id: int, reason: str) -> None:
     # ended_at stored as ISO string consistent with your code style
     ended_at = datetime.now().isoformat(timespec="seconds")
     update_game(game_id, status="ended", end_reason=reason, ended_at=ended_at)
+
+def get_sentence_by_id(sentence_id: int) -> dict:
+    conn = get_db_connection()
+    conn.execute("PRAGMA foreign_keys = ON;")
+    row = conn.execute(
+        "SELECT id, sentence FROM source_sentences WHERE id = ?",
+        (sentence_id,),
+    ).fetchone()
+    conn.close()
+    if not row:
+        return {"id": 0, "english": ""}
+    return {"id": row["id"], "english": row["sentence"]}
+
 
 
 # -----------------------------
@@ -218,10 +233,17 @@ def register_routes(app):
         if game_state.get("status") == "ended":
             return redirect(url_for("game_result"))
 
-        sentence = pick_sentence(
-            game_state["level"],
-            avoid_id=game_state.get("last_sentence_id"),
-        )
+        locked_id = game_state.get("locked_sentence_id")
+
+        if locked_id:
+            sentence = get_sentence_by_id(int(locked_id))
+        else:
+            sentence = pick_sentence(
+                game_state["level"],
+                avoid_id=game_state.get("last_sentence_id"),
+            )
+            update_game(int(game_id), last_sentence_id=sentence["id"])
+
 
         # persist last_sentence_id
         update_game(int(game_id), last_sentence_id=sentence["id"])
@@ -282,11 +304,31 @@ def register_routes(app):
             feedback_id=feedback_id,
         )
 
+        locked_id = game_state.get("locked_sentence_id")
+        if locked_id:
+            if verdict == "correct":
+                update_game(int(game_id), locked_sentence_id=None, locked_since=None)
+            return render_template(
+            "feedback.html",
+            **game_state,
+            english_sentence=english_sentence,
+            user_norwegian=user_norwegian,
+            evaluation=evaluation.model_dump(),
+        )
+
         # Update counters (in memory first)
         turns_at_level = int(game_state["turns_at_level"]) + 1
         correct_streak = int(game_state["correct_streak"])
         incorrect_streak = int(game_state["incorrect_streak"])
         level = game_state["level"]
+
+        # lock if answer not correct
+        if verdict != "correct":
+            update_game(
+                int(game_id),
+                locked_sentence_id=sentence_id,
+                locked_since=datetime.now().isoformat(timespec="seconds"),
+            )
 
         if verdict == "correct":
             correct_streak += 1

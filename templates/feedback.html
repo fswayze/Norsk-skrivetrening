@@ -104,7 +104,7 @@
 
     <section class="feedback-actions">
       <form id="nextForm" action="/game/next" method="post">
-        <button id="submitBtn" type="submit">Neste</button>
+        <button id="submitBtn" type="submit">{{"Prøv Igjen" if locked_sentence_id else "Neste"}}</button>
       </form>
     </section>
   </main>

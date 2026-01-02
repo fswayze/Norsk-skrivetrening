@@ -27,6 +27,9 @@ CREATE TABLE IF NOT EXISTS games (
         CHECK (status IN ('active', 'ended')),
 
     end_reason TEXT NULL,
+    locked_sentence_id INTEGER,
+    locked_since TEXT,
+
 
     started_at TEXT NOT NULL DEFAULT (datetime('now')),
     ended_at   TEXT NULL,
