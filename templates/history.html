@@ -11,27 +11,16 @@
     <header class="history-header">
       <h1>Historikk</h1>
     </header>
-    {% macro format_datetime(dt) -%}
-    {% if dt %}
-        {{ dt[8:10] }}.{{ dt[5:7] }}.{{ dt[0:4] }} {{ dt[11:16] }}
-    {% else %}
-        -
-    {% endif %}
-    {%- endmacro %}
-
-
     {% if not games %}
       <p>Ingen spill funnet ennå.</p>
     {% else %}
       <table class="history-table">
         <thead>
           <tr>
-            <th>ID</th>
             <th>Nivå</th>
             <th>Status</th>
-            <th>Årsak</th>
-            <th>Startet</th>
-            <th>Avsluttet</th>
+            <th>Start</th>
+            <th>Slutt</th>
           </tr>
         </thead>
         <tbody>
@@ -39,18 +28,12 @@
             <tr>
               <td>
                 <a href="{{ url_for('history_detail', game_id=g['id']) }}">
-                  {{ g["id"] }}
+                  {{ g["level"] }}
                 </a>
               </td>
-              <td>{{ g["level"] }}</td>
-              <td>{{ g["status"] | capitalize }}</td>
-              {% set END_REASON_LABELS = {
-                "two_incorrect": "Two incorrect answers",
-                "no_progress": "No progress",
-              } %}
-              <td>{{ END_REASON_LABELS.get(g["end_reason"], "Ended") }}</td>
-              <td>{{ format_datetime(g["started_at"]) }}</td>
-                <td>{{ format_datetime(g["ended_at"]) }}</td>
+              <td>{{ "Ferdig" if g["status"] == "ended" else "Aktiv" }}</td>
+              <td>{{ g["started_at"] | fmt_dt }}</td>
+                <td>{{ g["ended_at"] | fmt_dt }}</td>
             </tr>
           {% endfor %}
         </tbody>

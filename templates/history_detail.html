@@ -11,13 +11,6 @@
     <header class="history-header">
       <h1>Rundedetaljer</h1>
     </header>
-    {% macro format_datetime(dt) -%}
-    {% if dt %}
-        {{ dt[8:10] }}.{{ dt[5:7] }}.{{ dt[0:4] }} {{ dt[11:16] }}
-    {% else %}
-        -
-    {% endif %}
-    {%- endmacro %}
     <section class="history-card">
       <ul>
         <li><strong>Status:</strong> {{ "Ferdig" if game["status"] == "ended" else "Aktiv" }}</li>
