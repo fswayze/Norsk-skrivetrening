@@ -20,7 +20,7 @@ DB_PATH = os.getenv("APP_DB_PATH", "data/app.db")
 MODEL_ID = "gpt-5-nano-2025-08-07"
 LT_ENDPOINT = os.getenv("LANGUAGETOOL_ENDPOINT", "https://api.languagetool.org/v2/check")
 LT_LANGUAGE = os.getenv("LANGUAGETOOL_LANGUAGE", "nb")  # Bokmål
-PROMPT_VERSION = "grading-v1.1"   # bump when you change prompts/rubric
+PROMPT_VERSION = "grading-v1.3"   # bump when you change prompts/rubric
 LT_VERSION = f"{LT_LANGUAGE}|{LT_ENDPOINT}|v1"
 
 
@@ -189,7 +189,7 @@ def _languagetool_check(text: str, timeout_s: float = 4.0) -> Dict[str, Any]:
     """
     payload = {
         "language": LT_LANGUAGE,
-        "text": text,
+        "text": "Dette er bokmål: " + text,
     }
     r = requests.post(LT_ENDPOINT, data=payload, timeout=timeout_s)
     r.raise_for_status()
@@ -229,16 +229,58 @@ def _lt_category(match: Dict[str, Any]) -> str:
 
 
 def _lt_suggest_fix(match: Dict[str, Any], original_text: str) -> str:
-    # Prefer first replacement if present; otherwise fall back to message
     repl = match.get("replacements") or []
-    if repl and isinstance(repl, list) and repl[0].get("value"):
-        return repl[0]["value"]
 
-    # As a fallback, show the problematic span
     offset = int(match.get("offset", 0))
     length = int(match.get("length", 0))
     span = original_text[offset : offset + length] if length > 0 else ""
-    return span.strip() or "—"
+    span = (span or "").strip()
+
+    if not repl:
+        return span or "—"
+
+    # Extract issue type
+    rule = match.get("rule", {}) or {}
+    issue_type = (rule.get("issueType") or "").lower()
+
+    candidates = [(r.get("value") or "").strip() for r in repl]
+    candidates = [c for c in candidates if c]
+
+    if not candidates:
+        return span or "—"
+
+    def is_title(s: str) -> bool:
+        return len(s) > 0 and s[:1].isupper() and s[1:].islower()
+
+    # --- Casing logic ONLY for spelling/typo issues ---
+    if issue_type in {"misspelling", "typographical"}:
+        if span.islower():
+            # Mid-sentence lowercase: prefer lowercase replacement
+            if offset != 0:
+                for c in candidates:
+                    if c.islower():
+                        return c
+            # Sentence start: allow Title Case
+            for c in candidates:
+                if is_title(c):
+                    return c
+            return candidates[0]
+
+        if span.isupper():
+            for c in candidates:
+                if c.isupper():
+                    return c
+            return candidates[0]
+
+        if is_title(span):
+            for c in candidates:
+                if is_title(c):
+                    return c
+            return candidates[0]
+
+    # --- Default: trust LanguageTool ordering ---
+    return candidates[0]
+
 
 
 def _lt_to_issues(lt_json: Dict[str, Any], original_text: str) -> Tuple[List[Issue], List[Dict[str, Any]]]:
@@ -377,55 +419,6 @@ OUTPUT:
 - short_rule: én setning med viktigste regel eller råd.
 """
 
-
-def _audit_system_prompt() -> str:
-    return (
-        "Du er en kvalitetssikrer (audit) for en norskprøven-sensor. "
-        "Du får: engelsk original, brukerens norske setning, LanguageTool-funn, og et foreslått evalueringsobjekt. "
-        "Oppgave: Returner et REVIDERT evalueringsobjekt i samme schema. "
-        "Regler:\n"
-        "1) Ikke legg til unødvendige issues. Maks 3.\n"
-        "2) Fjern eller nedgrader issues som ikke er reelle feil. Hvis noe er en akseptabel variant, bruk severity='variant' eller fjern.\n"
-        "3) Ta med manglende KLARE feil, spesielt rettskriving/ortografi og åpenbare grammatikkfeil.\n"
-        "4) Issues må samsvare med corrected. Hvis corrected endrer X, må issue forklare X (med minimal fix).\n"
-        "5) Ikke hallusiner grammatikkregler: Hvis du er usikker, bruk variant/style eller utelat.\n"
-        "6) LanguageTool-funn for rettskriving/grammatikk veier tungt. Ikke ignorer dem uten god grunn.\n"
-    )
-
-
-def _audit_user_prompt(
-    level: str,
-    english: str,
-    user_norwegian: str,
-    lt_summary: str,
-    draft: Evaluation,
-) -> str:
-    return f"""
-NIVÅ: {level}
-
-ENGELSK SETNING:
-{english}
-
-BRUKERENS NORSK:
-{user_norwegian}
-
-LANGUAGETOOL-FUNN:
-{lt_summary}
-
-UTKAST (fra sensor):
-- verdict: {draft.verdict}
-- corrected: {draft.corrected}
-- short_rule: {draft.short_rule}
-- issues:
-{[i.model_dump() for i in draft.issues]}
-
-REVIDER:
-- Returner et nytt Evaluation-objekt (samme JSON/Pydantic-format).
-- Maks 3 issues.
-- Prioritér objektive feil fra LanguageTool.
-"""
-
-
 def _format_lt_summary(lt_json: Optional[Dict[str, Any]], original: str, max_items: int = 6) -> str:
     """
     Compact summary passed to LLM; we don't need every detail.
@@ -490,6 +483,7 @@ def evaluate_translation(
     lt_issues: List[Issue] = []
     lt_objective: List[Dict[str, Any]] = []
 
+
     try:
         lt_json = _languagetool_check(user_norwegian)
         lt_issues, lt_objective = _lt_to_issues(lt_json, user_norwegian)
@@ -498,6 +492,8 @@ def evaluate_translation(
         lt_issues = []
         lt_objective = []
 
+    print(lt_json)
+    print(lt_issues)
     lt_summary = _format_lt_summary(lt_json, user_norwegian)
 
     # 2) Single LLM pass: grading
@@ -510,7 +506,11 @@ def evaluate_translation(
         text_format=Evaluation,
     )
 
+
     ev: Evaluation = response.output_parsed
+
+    print(ev)
+
 
     # 3) Merge LT issues (objective errors win)
     merged: List[Issue] = []

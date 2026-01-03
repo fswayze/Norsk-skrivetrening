@@ -1,0 +1,181 @@
+{
+  "timestamp": "2026-01-03T10-29-51",
+  "dataset": "eval_cases.jsonl",
+  "label": "",
+  "results": [
+    {
+      "id": "case_den_pronoun_style_overreach",
+      "ok": true,
+      "failures": [],
+      "latency_ms": 40784.97790900292,
+      "evaluation": {
+        "verdict": "correct",
+        "meaning": "same",
+        "corrected": "Hvis jeg hadde mer tid, ville jeg tilbringe tid med familien min.",
+        "issues": [
+          {
+            "category": "ordvalg",
+            "severity": "variant",
+            "explanation": "Bruken av 'den' i 'tilbringe den' er unaturlig i denne idiomatiske konstruksjonen; vanlig og naturlig er 'tilbringe tid'.",
+            "fix": "Tilrinn: 'tilbringe tid' i stedet for 'tilbringe den'"
+          }
+        ],
+        "short_rule": "Etter en innledet betingelsessetning følger hovedsetningen vanligvis med verbet først (V2), og faste uttrykk som 'tilbringe tid' brukes uten ekstra pronomen som 'den'."
+      }
+    },
+    {
+      "id": "case_counterfactual_correct",
+      "ok": true,
+      "failures": [],
+      "latency_ms": 52060.51095500152,
+      "evaluation": {
+        "verdict": "correct",
+        "meaning": "same",
+        "corrected": "Hvis jeg hadde mer tid, ville jeg tilbringe den med familien min.",
+        "issues": [
+          {
+            "category": "bøying",
+            "severity": "variant",
+            "explanation": "Tidsform i protasis blir ofte: 'Hvis jeg hadde mer tid' i stedet for 'hvis jeg hadde hatt mer tid' (gir en nåtids hypotese som samsvarer bedre med engelsk 'If I had more time').",
+            "fix": "Hvis jeg hadde mer tid, ville jeg tilbringe den med familien min."
+          }
+        ],
+        "short_rule": "Ved oversettelse av en engelsk betingelsessetning til norsk, bruk 'Hvis ... hadde' i protasis og 'ville' + infinitiv i hovedsetningen; unngå 'hadde hatt' i denne betydningen."
+      }
+    },
+    {
+      "id": "case_english_intrusion_and_spelling",
+      "ok": true,
+      "failures": [],
+      "latency_ms": 30411.92546200182,
+      "evaluation": {
+        "verdict": "incorrect",
+        "meaning": "same",
+        "corrected": "Etter jobb går jeg ofte på treningssenteret.",
+        "issues": [
+          {
+            "category": "rettskriving",
+            "severity": "error",
+            "explanation": "Possible spelling mistake found.",
+            "fix": "jobb"
+          },
+          {
+            "category": "rettskriving",
+            "severity": "error",
+            "explanation": "Possible spelling mistake found.",
+            "fix": "ofte"
+          },
+          {
+            "category": "rettskriving",
+            "severity": "error",
+            "explanation": "mangler bokstav i 'jobb' og engelsk ord 'often' er brukt; feil i mellomrom i 'treningssenteret'",
+            "fix": "Etter jobb går jeg ofte på treningssenteret."
+          }
+        ],
+        "short_rule": "Bruk korrekt norsk stavemåte: skriv 'jobb', 'ofte' og slå sammen 'treningssenteret' til ett ord."
+      }
+    },
+    {
+      "id": "case_compound_noun_split",
+      "ok": false,
+      "failures": [
+        "verdict=correct not in ['minor', 'incorrect']"
+      ],
+      "latency_ms": 27676.88191900379,
+      "evaluation": {
+        "verdict": "correct",
+        "meaning": "same",
+        "corrected": "Jeg går på treningssenteret.",
+        "issues": [
+          {
+            "category": "rettskriving",
+            "severity": "error",
+            "explanation": "Treningssenteret er et sammensatt ord som skrives som ett ord. Originalet 'trening senteret' er feilskriving og avgreningsfeil.",
+            "fix": "Jeg går på treningssenteret."
+          }
+        ],
+        "short_rule": "Sammensatte ord som betegner et sted (som treningssenter) skrives som ett ord, og bruk 'på' når du snakker om å gå til eller være ved stedet."
+      }
+    },
+    {
+      "id": "case_v2_word_order_error",
+      "ok": true,
+      "failures": [],
+      "latency_ms": 29843.78666699922,
+      "evaluation": {
+        "verdict": "incorrect",
+        "meaning": "same",
+        "corrected": "I går dro jeg til butikken.",
+        "issues": [
+          {
+            "category": "ordstilling",
+            "severity": "error",
+            "explanation": "I en norsk hovedsetning står tidsadverbialet først, deretter verbet og så subjektet. Den korrekte rekkefølgen er 'I går dro jeg til butikken.'",
+            "fix": "I går dro jeg til butikken."
+          }
+        ],
+        "short_rule": "I en norsk hovedsetning med tidsadverbial står verbet rett etter adverbialet og deretter subjektet (I går dro jeg til butikken)."
+      }
+    },
+    {
+      "id": "case_variant_not_error_definite_form",
+      "ok": true,
+      "failures": [],
+      "latency_ms": 15806.664316005481,
+      "evaluation": {
+        "verdict": "correct",
+        "meaning": "same",
+        "corrected": "Samfunnet endrer seg raskt.",
+        "issues": [],
+        "short_rule": "V2-regelen i norske hovedsetninger: plassér verbet rett etter subjektet og la adverbialet komme til slutt."
+      }
+    },
+    {
+      "id": "case_noe_neon_false_positive_guard",
+      "ok": true,
+      "failures": [],
+      "latency_ms": 19777.918820997,
+      "evaluation": {
+        "verdict": "minor",
+        "meaning": "same",
+        "corrected": "Jeg trenger noe å spise.",
+        "issues": [
+          {
+            "category": "rettskriving",
+            "severity": "error",
+            "explanation": "Possible spelling mistake found.",
+            "fix": "nye"
+          }
+        ],
+        "short_rule": "Infinitiv etter objektet: i setninger som 'Jeg trenger noe å spise' kommer 'å spise' rett etter objektet."
+      }
+    },
+    {
+      "id": "case_pure_spelling_simple",
+      "ok": true,
+      "failures": [],
+      "latency_ms": 23913.538674998563,
+      "evaluation": {
+        "verdict": "minor",
+        "meaning": "same",
+        "corrected": "Jeg liker musikk.",
+        "issues": [
+          {
+            "category": "rettskriving",
+            "severity": "error",
+            "explanation": "Possible spelling mistake found.",
+            "fix": "musikk"
+          }
+        ],
+        "short_rule": "Skriv ordet 'musikk' med to k-er."
+      }
+    }
+  ],
+  "summary": {
+    "passed": 7,
+    "failed": 1,
+    "total_ms": 240278.00210699934,
+    "p50_ms": 27676.88191900379,
+    "p90_ms": 40784.97790900292
+  }
+}
