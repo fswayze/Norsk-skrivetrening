@@ -482,7 +482,6 @@ def register_routes(app):
         ).fetchall()
 
         conn.close()
-        print(rows)
 
         # Group attempts by level and decode evaluation JSON for template use
         grouped = defaultdict(list)
