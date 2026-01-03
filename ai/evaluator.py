@@ -17,10 +17,10 @@ client = OpenAI()
 
 Severity = Literal["error", "variant", "style"]
 DB_PATH = os.getenv("APP_DB_PATH", "data/app.db")
-MODEL_ID = "gpt-5-nano-2025-08-07"
+MODEL_ID = "gpt-5-mini-2025-08-07"
 LT_ENDPOINT = os.getenv("LANGUAGETOOL_ENDPOINT", "https://api.languagetool.org/v2/check")
 LT_LANGUAGE = os.getenv("LANGUAGETOOL_LANGUAGE", "nb")  # Bokmål
-PROMPT_VERSION = "grading-v1.3"   # bump when you change prompts/rubric
+PROMPT_VERSION = "grading-v1.8"   # bump when you change prompts/rubric
 LT_VERSION = f"{LT_LANGUAGE}|{LT_ENDPOINT}|v1"
 
 
@@ -189,7 +189,7 @@ def _languagetool_check(text: str, timeout_s: float = 4.0) -> Dict[str, Any]:
     """
     payload = {
         "language": LT_LANGUAGE,
-        "text": "Dette er bokmål: " + text,
+        "text": text,
     }
     r = requests.post(LT_ENDPOINT, data=payload, timeout=timeout_s)
     r.raise_for_status()
@@ -511,22 +511,7 @@ def evaluate_translation(
 
     print(ev)
 
-
-    # 3) Merge LT issues (objective errors win)
-    merged: List[Issue] = []
-    if lt_issues:
-        merged.extend(lt_issues)
-
-    for iss in ev.issues:
-        if len(merged) >= 3:
-            break
-        dup = any(iss.category == m.category and iss.fix == m.fix for m in merged)
-        if not dup:
-            merged.append(iss)
-
-    ev.issues = merged[:3]
-
-    # 4) Verdict arbitration via LT floor
+    # 3) Verdict arbitration via LT floor
     floor = _lt_verdict_floor(lt_objective)
     if floor is not None:
         if floor == "minor" and ev.verdict == "correct":
@@ -534,12 +519,15 @@ def evaluate_translation(
         elif floor == "incorrect":
             ev.verdict = "incorrect"
 
-    # 5) Reinjection safety
+    # 4) Reinjection safety
     if lt_issues and not any(i.severity == "error" for i in ev.issues):
+        print('hitting reincjection safety')
+        print('issues')
+        print(ev.issues)
         reinject = [i for i in lt_issues if i.severity == "error"]
         ev.issues = (reinject + ev.issues)[:3]
 
-    # 6) Final correctness override
+    # 5) Final correctness override
     error_count = sum(1 for i in ev.issues if i.severity == "error")
     if len(lt_objective) == 0 and ev.meaning == "same" and error_count == 0:
         ev.verdict = "correct"

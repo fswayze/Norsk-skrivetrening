@@ -1,0 +1,164 @@
+{
+  "timestamp": "2026-01-03T11-23-37",
+  "dataset": "eval_cases.jsonl",
+  "label": "",
+  "results": [
+    {
+      "id": "case_den_pronoun_style_overreach",
+      "ok": true,
+      "failures": [],
+      "latency_ms": 14098.936199996388,
+      "evaluation": {
+        "verdict": "correct",
+        "meaning": "same",
+        "corrected": "Hvis jeg hadde mer tid, ville jeg tilbringe den med familien min.",
+        "issues": [],
+        "short_rule": "For hypotetiske situasjoner brukes 'hvis' + preteritum ('hadde') i leddsetningen og 'ville' + infinitiv i hovedsetningen; pronomet 'den' kan referere tilbake til 'tid'."
+      }
+    },
+    {
+      "id": "case_english_intrusion_and_spelling",
+      "ok": true,
+      "failures": [],
+      "latency_ms": 33542.07326200412,
+      "evaluation": {
+        "verdict": "incorrect",
+        "meaning": "same",
+        "corrected": "Etter jobb går jeg ofte på treningssenteret.",
+        "issues": [
+          {
+            "category": "rettskriving",
+            "severity": "error",
+            "explanation": "Possible spelling mistake found.",
+            "fix": "jobb"
+          },
+          {
+            "category": "rettskriving",
+            "severity": "error",
+            "explanation": "Possible spelling mistake found.",
+            "fix": "ofte"
+          },
+          {
+            "category": "ordvalg/rettskriving",
+            "severity": "error",
+            "explanation": "Setningen inneholder engelsk ord ('often'), som ikke brukes i norsk; dette er en klar ordbruks/rettskrivingsfeil.",
+            "fix": "Bytt 'often' til norske 'ofte'."
+          }
+        ],
+        "short_rule": "Bruk norske ord og korrekt ortografi: 'ofte' (ikke 'often'), skriv 'jobb' eller 'jobben', og si 'på treningssenteret' (ett ord) for 'to the gym'."
+      }
+    },
+    {
+      "id": "case_compound_noun_split",
+      "ok": true,
+      "failures": [],
+      "latency_ms": 26412.505134998355,
+      "evaluation": {
+        "verdict": "minor",
+        "meaning": "same",
+        "corrected": "Jeg går på treningssenteret.",
+        "issues": [
+          {
+            "category": "rettskriving",
+            "severity": "error",
+            "explanation": "Sammensatte substantiv skrives sammen på norsk; 'trening senteret' er feil delt opp.",
+            "fix": "Skriv det som ett ord: 'treningssenteret' — f.eks. 'Jeg går på treningssenteret.'"
+          },
+          {
+            "category": "preposisjon",
+            "severity": "style",
+            "explanation": "'Går til' er ikke grammatikalsk feil her, men det er mer idiomatisk å si 'går på' når man snakker om å gå til et sted for aktiviteter (som treningssenteret).",
+            "fix": "Bytt 'til' til 'på' for en mer naturlig formulering: 'Jeg går på treningssenteret.'"
+          }
+        ],
+        "short_rule": "Skriv sammensatte substantiv sammen, og bruk ofte 'på' når du sier at du går til et sted for aktivitet."
+      }
+    },
+    {
+      "id": "case_v2_word_order_error",
+      "ok": true,
+      "failures": [],
+      "latency_ms": 15320.681282995793,
+      "evaluation": {
+        "verdict": "minor",
+        "meaning": "same",
+        "corrected": "I går dro jeg til butikken.",
+        "issues": [
+          {
+            "category": "V2",
+            "severity": "error",
+            "explanation": "Setningen bryter V2-regelen: når et tidsadverbial står først, må det finitte verbet være i andre posisjon, og subjektet komme etter verbet.",
+            "fix": "Flytt verbet foran subjektet: «I går dro jeg til butikken.» Alternativt: «Jeg dro til butikken i går.»"
+          }
+        ],
+        "short_rule": "Når et adverbial (f.eks. «I går») står først i setningen, må det finitte verbet komme i andre posisjon (V2), og subjektet etter verbet."
+      }
+    },
+    {
+      "id": "case_variant_not_error_definite_form",
+      "ok": true,
+      "failures": [],
+      "latency_ms": 7394.535803003237,
+      "evaluation": {
+        "verdict": "correct",
+        "meaning": "same",
+        "corrected": "Samfunnet endrer seg raskt.",
+        "issues": [],
+        "short_rule": "Hold korrekt ordstilling (V2) og bruk refleksivt 'endre seg' ved å uttrykke at noe forandrer seg; setningen er grammatisk riktig og naturlig."
+      }
+    },
+    {
+      "id": "case_noe_neon_false_positive_guard",
+      "ok": true,
+      "failures": [],
+      "latency_ms": 6768.609127000673,
+      "evaluation": {
+        "verdict": "minor",
+        "meaning": "same",
+        "corrected": "Jeg trenger noe å spise.",
+        "issues": [
+          {
+            "category": "rettskriving",
+            "severity": "error",
+            "explanation": "Possible spelling mistake found.",
+            "fix": "nye"
+          }
+        ],
+        "short_rule": "Bruk «noe å + verb» for å uttrykke «something to [verb]», for eksempel «Jeg trenger noe å spise.»."
+      }
+    },
+    {
+      "id": "case_pure_spelling_simple",
+      "ok": true,
+      "failures": [],
+      "latency_ms": 9528.91357599583,
+      "evaluation": {
+        "verdict": "minor",
+        "meaning": "same",
+        "corrected": "Jeg liker musikk.",
+        "issues": [
+          {
+            "category": "rettskriving",
+            "severity": "error",
+            "explanation": "Possible spelling mistake found.",
+            "fix": "musikk"
+          },
+          {
+            "category": "rettskriving",
+            "severity": "error",
+            "explanation": "Ordet 'musikkk' har en skrivefeil med for mange k-er; dette er en klar rettskrivingsfeil.",
+            "fix": "Skriv 'musikk' med to k-er: «Jeg liker musikk.»"
+          }
+        ],
+        "short_rule": "Sjekk rettskrivingen: ordet 'musikk' skrives med to k-er, ikke tre."
+      }
+    }
+  ],
+  "summary": {
+    "passed": 7,
+    "failed": 0,
+    "total_ms": 113069.26766599645,
+    "p50_ms": 14098.936199996388,
+    "p90_ms": 26412.505134998355
+  }
+}

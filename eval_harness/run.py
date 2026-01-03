@@ -84,18 +84,11 @@ def _evaluation_blob(ev_dict: Dict[str, Any]) -> str:
         ]
     )
 
-
-def _match_clause_in_issues(ev_dict: Dict[str, Any], clause: Dict[str, Any]) -> bool:
-    """
-    Returns True if ANY single issue matches all constraints in clause.
-
-    Supported clause fields:
-      - severity: "error"|"variant"|"style" (optional)
-      - contains_any: [str,...] (optional)  -> match against category/severity/explanation/fix blob
-    """
+def _count_clause_matches_in_issues(ev_dict: Dict[str, Any], clause: Dict[str, Any]) -> int:
     severity = clause.get("severity")
     contains_any = clause.get("contains_any") or []
 
+    count = 0
     for i in ev_dict.get("issues") or []:
         if severity and i.get("severity") != severity:
             continue
@@ -112,9 +105,41 @@ def _match_clause_in_issues(ev_dict: Dict[str, Any], clause: Dict[str, Any]) -> 
             if not _text_contains_any(blob, contains_any):
                 continue
 
+        count += 1
+
+    return count
+
+
+def _match_clause_in_issues(ev_dict: Dict[str, Any], clause: Dict[str, Any]) -> bool:
+    """
+    Returns True if clause constraints are satisfied.
+
+    Existing behavior (no count_* in clause):
+      - True if ANY single issue matches constraints.
+
+    New behavior (count_min/count_max/count_eq present):
+      - Apply those constraints to the number of matching issues.
+    """
+    count = _count_clause_matches_in_issues(ev_dict, clause)
+
+    count_min = clause.get("count_min")
+    count_max = clause.get("count_max")
+    count_eq = clause.get("count_eq")
+
+    if count_min is not None and count < int(count_min):
+        return False
+    if count_max is not None and count > int(count_max):
+        return False
+    if count_eq is not None and count != int(count_eq):
+        return False
+
+    # If any count constraint exists, we’re done.
+    if count_min is not None or count_max is not None or count_eq is not None:
         return True
 
-    return False
+    # Backwards-compatible default: “exists at least one”
+    return count > 0
+
 
 
 def _match_clause_in_evaluation(ev_dict: Dict[str, Any], clause: Dict[str, Any]) -> bool:
