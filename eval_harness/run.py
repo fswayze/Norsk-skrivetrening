@@ -9,11 +9,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-
-# Adjust this import to your project structure.
-# If evaluator.py lives in ai/evaluator.py, use:
-# from ai.evaluator import evaluate_translation, Evaluation, Issue
-from ai.evaluator import evaluate_translation, Evaluation, Issue  # type: ignore
+from ai.evaluator import evaluate_translation, Evaluation, Issue 
 
 
 @dataclass

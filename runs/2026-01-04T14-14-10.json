@@ -1,0 +1,184 @@
+{
+  "timestamp": "2026-01-04T14-14-10",
+  "dataset": "eval_cases.jsonl",
+  "label": "",
+  "results": [
+    {
+      "id": "case_den_pronoun_style_overreach",
+      "ok": true,
+      "failures": [],
+      "latency_ms": 12126.373531005811,
+      "evaluation": {
+        "verdict": "correct",
+        "meaning": "same",
+        "corrected": "Hvis jeg hadde mer tid, ville jeg brukt den sammen med familien min.",
+        "issues": [],
+        "short_rule": "I hypotetiske/urealistiske betingelser brukes preteritum i hvis-setningen (hadde) og Kondisjonalis (ville + infinitiv) i hovedsetningen."
+      }
+    },
+    {
+      "id": "case_english_intrusion_and_spelling",
+      "ok": true,
+      "failures": [],
+      "latency_ms": 25638.908270004322,
+      "evaluation": {
+        "verdict": "incorrect",
+        "meaning": "same",
+        "corrected": "Etter jobb går jeg ofte på treningssenteret.",
+        "issues": [
+          {
+            "category": "rettskriving",
+            "severity": "error",
+            "explanation": "«job» er feilstavet; på norsk staves det «jobb».",
+            "fix": "Bytt «job» til «jobb» → «Etter jobb …»"
+          },
+          {
+            "category": "rettskriving",
+            "severity": "error",
+            "explanation": "«often» er engelsk; det norske ordet er «ofte».",
+            "fix": "Bytt «often» til «ofte» → «… går jeg ofte …»"
+          },
+          {
+            "category": "sammensetning/ordvalg",
+            "severity": "error",
+            "explanation": "«trening senteret» skal skrives sammen som «treningssenteret». I denne sammenhengen er også preposisjonen «på» mer idiomatisk enn «til».",
+            "fix": "Bruk «på treningssenteret» eller minst «treningssenteret» skrevet som ett ord → «på treningssenteret»"
+          }
+        ],
+        "short_rule": "Skriv riktige norske ord («jobb», «ofte»), sammenstill sammensatte substantiv («treningssenteret») og bruk vanligvis «på» foran treningssenteret: «Etter jobb går jeg ofte på treningssenteret.»"
+      }
+    },
+    {
+      "id": "case_compound_noun_split",
+      "ok": true,
+      "failures": [],
+      "latency_ms": 20906.534187000943,
+      "evaluation": {
+        "verdict": "minor",
+        "meaning": "same",
+        "corrected": "Jeg går på treningssenteret.",
+        "issues": [
+          {
+            "category": "rettskriving/sammensatt substantiv",
+            "severity": "error",
+            "explanation": "Sammensatte substantiv skrives normalt som ett ord på norsk; 'trening senteret' er feil skrevet med mellomrom.",
+            "fix": "Skriv 'treningssenteret' (ett ord)."
+          },
+          {
+            "category": "preposisjon",
+            "severity": "variant",
+            "explanation": "'Til' er grammatisk mulig, men for vanemessig aktivitet er 'på' mer idiomatisk: 'Jeg går på treningssenteret.'",
+            "fix": "Bytt 'til' til 'på' hvis du mener at du regelmessig går til treningssenteret: 'Jeg går på treningssenteret.'"
+          }
+        ],
+        "short_rule": "Skriv sammensatte ord uten mellomrom (treningssenteret), og bruk gjerne 'på' når du snakker om vanlige aktiviteter som å gå på treningssenteret."
+      }
+    },
+    {
+      "id": "case_v2_word_order_error",
+      "ok": true,
+      "failures": [],
+      "latency_ms": 12100.163801995222,
+      "evaluation": {
+        "verdict": "minor",
+        "meaning": "same",
+        "corrected": "I går dro jeg til butikken.",
+        "issues": [
+          {
+            "category": "V2",
+            "severity": "error",
+            "explanation": "Ordstillingen bryter V2-regelen: når setningen begynner med et tidsadverbial ('I går'), må det finitte verbet stå i andre posisjon. Formen 'I går jeg dro...' er ugrammatisk.",
+            "fix": "I går dro jeg til butikken."
+          }
+        ],
+        "short_rule": "Begynner setningen med et adverbial (f.eks. 'I går'), skal det finitte verbet stå i andre posisjon: 'I går dro jeg...'."
+      }
+    },
+    {
+      "id": "case_variant_not_error_definite_form",
+      "ok": true,
+      "failures": [],
+      "latency_ms": 6411.489062011242,
+      "evaluation": {
+        "verdict": "correct",
+        "meaning": "same",
+        "corrected": "Samfunnet endrer seg raskt.",
+        "issues": [],
+        "short_rule": "Oversettelsen er korrekt; bruk 'endre seg' for 'to change' og plasser adverbet ('raskt') etter verbet i naturlig bokmål."
+      }
+    },
+    {
+      "id": "case_noe_neon_false_positive_guard",
+      "ok": true,
+      "failures": [],
+      "latency_ms": 14827.275682997424,
+      "evaluation": {
+        "verdict": "minor",
+        "meaning": "same",
+        "corrected": "Jeg trenger noe å spise.",
+        "issues": [
+          {
+            "category": "rettskriving",
+            "severity": "error",
+            "explanation": "Possible spelling mistake found.",
+            "fix": "nye"
+          },
+          {
+            "category": "rettskriving",
+            "severity": "style",
+            "explanation": "LanguageTool foreslår feilaktig «nye» som retting for «noe». «Noe» er korrekt i denne setningen.",
+            "fix": "Ingen endring nødvendig — behold «noe»."
+          }
+        ],
+        "short_rule": "Bruk «noe å + infinitiv» for «something to [verb]», for eksempel «Jeg trenger noe å spise.»."
+      }
+    },
+    {
+      "id": "case_pure_spelling_simple",
+      "ok": true,
+      "failures": [],
+      "latency_ms": 9356.798862994765,
+      "evaluation": {
+        "verdict": "minor",
+        "meaning": "same",
+        "corrected": "Jeg liker musikk.",
+        "issues": [
+          {
+            "category": "rettskriving",
+            "severity": "error",
+            "explanation": "Det er en klar stavefeil: ordet har en ekstra 'k' ('musikkk'). Riktig stavemåte er 'musikk'.",
+            "fix": "Musikk → musikk (setningen: «Jeg liker musikk.»)"
+          }
+        ],
+        "short_rule": "Sjekk stavemåten: «musikk» staves med to k-er, ikke tre."
+      }
+    },
+    {
+      "id": "case_single_word_spelling_no_duplicate_issues",
+      "ok": true,
+      "failures": [],
+      "latency_ms": 10651.740410001366,
+      "evaluation": {
+        "verdict": "minor",
+        "meaning": "same",
+        "corrected": "Jeg liker musikk.",
+        "issues": [
+          {
+            "category": "rettskriving",
+            "severity": "error",
+            "explanation": "Ordet «musikkk» inneholder en ekstra k og er en rettskrivingsfeil; det riktige er «musikk».",
+            "fix": "Endre «musikkk» til «musikk»."
+          }
+        ],
+        "short_rule": "Sjekk for unødvendige eller doble bokstaver; korrekt stavemåte er «musikk» (to k-er, ikke tre)."
+      }
+    }
+  ],
+  "summary": {
+    "passed": 8,
+    "failed": 0,
+    "total_ms": 112020.58066500467,
+    "p50_ms": 12100.163801995222,
+    "p90_ms": 20906.534187000943
+  }
+}
