@@ -492,8 +492,6 @@ def evaluate_translation(
         lt_issues = []
         lt_objective = []
 
-    print(lt_json)
-    print(lt_issues)
     lt_summary = _format_lt_summary(lt_json, user_norwegian)
 
     # 2) Single LLM pass: grading
@@ -509,8 +507,6 @@ def evaluate_translation(
 
     ev: Evaluation = response.output_parsed
 
-    print(ev)
-
     # 3) Verdict arbitration via LT floor
     floor = _lt_verdict_floor(lt_objective)
     if floor is not None:
@@ -521,9 +517,6 @@ def evaluate_translation(
 
     # 4) Reinjection safety
     if lt_issues and not any(i.severity == "error" for i in ev.issues):
-        print('hitting reincjection safety')
-        print('issues')
-        print(ev.issues)
         reinject = [i for i in lt_issues if i.severity == "error"]
         ev.issues = (reinject + ev.issues)[:3]
 
