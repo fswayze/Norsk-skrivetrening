@@ -3,7 +3,7 @@
 
 A web-based game for improving written Norwegian through exam-style translation practice and detailed, structured feedback.
 
-🎥 [Video Demo](https://www.loom.com/share/44ad0fa2339a4c5e964685c7e89d628c).
+[Video Demo](https://www.loom.com/share/44ad0fa2339a4c5e964685c7e89d628c)
 
 ## Overview
 
@@ -34,19 +34,24 @@ The game tracks progress, adapts difficulty, and presents detailed feedback.
 git clone https://github.com/fswayze/Norsk-skrivetrening.git
 cd Norsk-skrivetrening
 2. Create a virtual environment
+```
 python3 -m venv venv
 source venv/bin/activate
+```
 3. Install dependencies
+```
 pip install -r requirements.txt
+```
 4. Set environment variables
 Create a .env file:
 OPENAI_API_KEY=your_api_key_here
 5. Run the app
+```
 flask --app app.py run
-Then open:
-http://127.0.0.1:5000
+```
+open http://127.0.0.1:5000
 
 ## Why this project
 
-I've been learning Norwegian for the past four years, and my grammar/writing abilities were lagging behind, so I wanted a better way to practice. Additionaly, I wanted to explore how LLMs can provide useful, structured feedback rather than generic correctness scores.
+I've been learning Norwegian for the past four years. Since my grammar/writing abilities were lagging behind,  I wanted a better way to practice. Additionaly, I wanted to explore how LLMs can provide useful, structured feedback rather than generic correctness scores.
 
