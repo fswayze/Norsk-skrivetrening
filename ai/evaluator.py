@@ -517,6 +517,7 @@ def evaluate_translation(
 
     # 4) Reinjection safety
     if lt_issues and not any(i.severity == "error" for i in ev.issues):
+    
         reinject = [i for i in lt_issues if i.severity == "error"]
         ev.issues = (reinject + ev.issues)[:3]
 

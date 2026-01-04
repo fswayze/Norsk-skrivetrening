@@ -21,6 +21,7 @@ The game tracks progress, adapts difficulty, and presents detailed feedback for 
 - Per-game history view with all attempts and explanations
 - Keyboard-first interaction (Enter to submit, Shift+Enter for newline)
 - SQLite-backed persistence for games, attempts, and feedback
+- Built-in evaluation harness for regression-testing grading accuracy and latency
 
 ## Tech Stack
 
