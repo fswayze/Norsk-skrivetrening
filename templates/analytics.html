@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Analytikk</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  {% include "_header.html" %}
+
+  {% set items = (category_stats or {}).items() | list %}
+  {% set total_issues = items | map(attribute=1) | sum %}
+  {% set num_categories = items | length %}
+  {% set max_count = (items | map(attribute=1) | max) if num_categories > 0 else 0 %}
+
+  <main class="analytics">
+    <header class="analytics-header">
+      <h1>Analytikk</h1>
+    </header>
+
+   <p class="analytics-subtitle">Verdict informasjon</p>
+
+<section class="analytics-cards">
+  <div class="analytics-card">
+    <div class="analytics-card-label">Korrekt (Totalt)</div>
+    <div class="analytics-card-value">{{ verdict_by_level["Total"]["correct"] }}</div>
+  </div>
+  <div class="analytics-card">
+    <div class="analytics-card-label">Nesten (Totalt)</div>
+    <div class="analytics-card-value">{{ verdict_by_level["Total"]["minor"] }}</div>
+  </div>
+  <div class="analytics-card">
+    <div class="analytics-card-label">Feil (Totalt)</div>
+    <div class="analytics-card-value">{{ verdict_by_level["Total"]["incorrect"] }}</div>
+  </div>
+</section>
+
+<section class="analytics-section">
+  <h2 class="analytics-section-title">Verdict per nivå</h2>
+
+  <div class="analytics-table-wrap">
+    <table class="analytics-table">
+      <thead>
+        <tr>
+          <th>Nivå</th>
+          <th class="num">Korrekt</th>
+          <th class="num">Nesten</th>
+          <th class="num">Feil</th>
+          <th class="num">Totalt</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for lvl in levels %}
+          {% set c = verdict_by_level[lvl]["correct"] %}
+          {% set m = verdict_by_level[lvl]["minor"] %}
+          {% set i = verdict_by_level[lvl]["incorrect"] %}
+          <tr>
+            <td>{{ lvl }}</td>
+            <td class="num">{{ c }}</td>
+            <td class="num">{{ m }}</td>
+            <td class="num">{{ i }}</td>
+            <td class="num">{{ c + m + i }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+
+    <p class="analytics-subtitle">
+        Feilkategorier fra tilbakemeldinger.
+    </p>
+
+    <section class="analytics-cards">
+      <div class="analytics-card">
+        <div class="analytics-card-label">Totalt antall issues</div>
+        <div class="analytics-card-value">{{ total_issues }}</div>
+      </div>
+      <div class="analytics-card">
+        <div class="analytics-card-label">Antall kategorier</div>
+        <div class="analytics-card-value">{{ num_categories }}</div>
+      </div>
+    </section>
+
+    {% if num_categories == 0 %}
+      <section class="analytics-empty">
+        <p>Ingen data å vise enda.</p>
+      </section>
+    {% else %}
+
+      {# Sort descending by count #}
+      {% set sorted_items = items | sort(attribute=1, reverse=true) %}
+
+      <section class="analytics-section">
+        <h2 class="analytics-section-title">Fordeling</h2>
+
+        <div class="analytics-bars" role="list">
+          {% for cat, count in sorted_items %}
+            {% set pct = (count / max_count * 100) if max_count > 0 else 0 %}
+            <div class="analytics-bar-row" role="listitem">
+              <div class="analytics-bar-label" title="{{ cat }}">{{ cat }}</div>
+              <div class="analytics-bar-track" aria-hidden="true">
+                <div
+                    class="analytics-bar-fill"
+                    style="--pct: {{ pct }}%;">
+                </div>              
+              </div>
+              <div class="analytics-bar-count">{{ count }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+  </main>
+</body>
+</html>

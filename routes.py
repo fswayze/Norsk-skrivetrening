@@ -12,6 +12,7 @@ from collections import defaultdict
 from pprint import pprint
 
 LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"]
+VERDICTS = ["correct", "minor", "incorrect"]
 
 
 def pick_sentence(level: str, avoid_id=None):
@@ -502,5 +503,65 @@ def register_routes(app):
             "history_detail.html",
             game=game,
             attempts_by_level=attempts_by_level,
+        )
+
+    @app.route("/analytics", methods=["GET"])
+    def analytics():
+        conn = get_db_connection()
+        conn.execute("PRAGMA foreign_keys = ON;")
+        rows = conn.execute(
+            """
+            SELECT
+                ta.level AS attempt_level,
+                tf.verdict,
+                tf.feedback_json
+            FROM translation_attempts ta
+            JOIN translation_feedback tf ON tf.id = ta.feedback_id
+            ORDER BY ta.id ASC
+            """,
+        ).fetchall()
+        conn.close()
+
+        category_stats = defaultdict(int)
+        verdict_by_level = defaultdict(lambda: defaultdict(int))
+
+        for r in rows:
+            d = dict(r)
+            level = (d.get("attempt_level") or "").strip()
+            try:
+                evaluation = json.loads(d["feedback_json"]) if d.get("feedback_json") else {}
+            except Exception:
+                continue
+
+            issues = evaluation.get("issues") or []
+            if not isinstance(issues, list):
+                continue
+
+            for issue in issues:
+                if not isinstance(issue, dict):
+                    continue
+                category = (issue.get("category") or "").strip()
+                if not category:
+                    category = "unknown"
+                category_stats[category] += 1
+
+            verdict = (evaluation.get("verdict") or "").strip()
+            verdict_by_level["Total"][verdict] += 1
+            if level:
+                verdict_by_level[level][verdict] += 1
+
+        for lvl in ["Total"] + LEVELS:
+            _ = verdict_by_level[lvl]  # ensure dict exists
+            for v in VERDICTS:
+                verdict_by_level[lvl][v] += 0
+        # Convert to a normal dict (optional, but nice for Jinja/debugging)
+        category_stats = dict(category_stats)
+
+        return render_template(
+            "analytics.html",
+            category_stats=category_stats,
+            verdict_by_level={k: dict(v) for k, v in verdict_by_level.items()},
+            levels=["Total"] + LEVELS,
+            verdicts=VERDICTS,
         )
 

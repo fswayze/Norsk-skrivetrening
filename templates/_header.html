@@ -8,6 +8,10 @@
          class="nav-link {% if request.endpoint.startswith('history') %}active{% endif %}">
         Historikk
       </a>
+      <a href="{{ url_for('analytics') }}"
+         class="nav-link {% if request.endpoint.startswith('analytics') %}active{% endif %}">
+        Analytikk
+      </a>
     </nav>
   </header>
   

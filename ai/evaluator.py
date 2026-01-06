@@ -6,7 +6,7 @@ from typing import Literal, List, Optional, Dict, Any, Tuple
 
 import requests
 from openai import OpenAI
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 import sqlite3
 import hashlib
 import json
@@ -22,12 +22,62 @@ LT_ENDPOINT = os.getenv("LANGUAGETOOL_ENDPOINT", "https://api.languagetool.org/v
 LT_LANGUAGE = os.getenv("LANGUAGETOOL_LANGUAGE", "nb")  # Bokmål
 PROMPT_VERSION = "grading-v1.8"   # bump when you change prompts/rubric
 LT_VERSION = f"{LT_LANGUAGE}|{LT_ENDPOINT}|v1"
+Category = Literal[
+    "rettskriving",        # spelling / typos
+    "tegnsetting",         # punctuation
+    "stor_bokstav",        # capitalization
+    "sammensatte_ord",     # compound words
+    "bøying",              # inflection (verb/noun/adjective)
+    "tempus",              # tense consistency (optional separate from bøying)
+    "ordstilling",         # V2, adverb placement
+    "preposisjon",         # prepositions
+    "pronomen",            # pronouns / referents
+    "artikkel",            # articles / definiteness
+    "kjønn",               # gender agreement
+    "ordvalg",             # word choice / collocation
+    "register",            # formality / tone
+    "betydning",           # meaning drift
+    "annet",               # fallback bucket
+]
 
+def _normalize_category(raw: str) -> str:
+    s = (raw or "").strip().lower()
+
+    # If the model tries to output multiple categories, pick the first token.
+    # (Better: map to most specific; this is simple + robust.)
+    for sep in [",", "/", " / ", " | ", ";"]:
+        if sep in s:
+            s = s.split(sep)[0].strip()
+            break
+
+    # Basic synonym mapping (adjust as you learn)
+    synonyms = {
+        "ortografi": "rettskriving",
+        "stavemåte": "rettskriving",
+        "kapitalisering": "stor_bokstav",
+        "store bokstaver": "stor_bokstav",
+        "tegnsetting/komma": "tegnsetting",
+        "tempus/verb-bøyning": "tempus",
+        "verb-bøyning": "bøying",
+        "grammatikk": "bøying",  # optional: or "annet" if you want grammar as its own bucket
+        "stil": "register",
+        "ordvalg/stil": "ordvalg",
+        "idiomatikk": "ordvalg",
+    }
+    s = synonyms.get(s, s)
+
+    return s if s in _ALLOWED else "annet"
 
 class Issue(BaseModel):
-    category: str = Field(
+    category: Category = Field(
         ...,
-        description="F.eks. V2, preposisjon, bøying, kjønn, ordvalg, tegnsetting, register, rettskriving",
+        description=(
+            "Én presis feilkategori (velg nøyaktig én). "
+            "Tillatte verdier: rettskriving, tegnsetting, stor_bokstav, "
+            "sammensatte_ord, bøying, tempus, ordstilling, preposisjon, "
+            "pronomen, artikkel, kjønn, ordvalg, register, betydning, annet. "
+            "Ikke kombiner kategorier (ingen '/' eller ',')."
+        ),
     )
     severity: Severity = Field(
         ...,
@@ -35,6 +85,11 @@ class Issue(BaseModel):
     )
     explanation: str = Field(..., description="Kort forklaring på norsk (1–2 setninger).")
     fix: str = Field(..., description="Minimal retting eller anbefalt formulering på norsk.")
+
+    @field_validator("category", mode="before")
+    @classmethod
+    def normalize_category(cls, v):
+        return _normalize_category(v)
 
 
 class Evaluation(BaseModel):
@@ -374,6 +429,12 @@ def _grading_user_prompt(
     user_norwegian: str,
     lt_summary: str,
 ) -> str:
+
+    allowed = (
+        "rettskriving, tegnsetting, stor_bokstav, sammensatte_ord, bøying, tempus, "
+        "ordstilling, preposisjon, pronomen, artikkel, kjønn, ordvalg, register, betydning, annet"
+    )
+
     return f"""
 NIVÅ: {level}
 
@@ -395,6 +456,8 @@ VURDERING:
 ISSUES:
 - Maks 3.
 - Hvert issue må ha: category, severity (error / variant / style), explanation, fix.
+- category må være ÉN av: {allowed}
+- Velg nøyaktig ÉN category per issue (ikke bruk "/" eller "," og ikke kombiner kategorier).
 - severity='variant' betyr: brukerens løsning kan være akseptabel.
 - severity='style' betyr: valgfri forbedring, ikke grammatikkfeil.
 - Ikke del opp én feil i flere issues. Én språklig feil → maks ett issue.
